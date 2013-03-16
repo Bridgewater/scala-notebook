@@ -22,6 +22,7 @@ import akka.util.Timeout
 
 class SingleVMSecurityTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec with MustMatchers with BeforeAndAfterAll {
 
+  import _system.dispatcher
   def this() = this(ActorSystem("MySpec", AkkaConfigUtils.requireCookie(ConfigFactory.load("subprocess-test"), "Cookie")))
 
   override def afterAll() {
@@ -60,6 +61,4 @@ class SingleVMSecurityTests(_system: ActorSystem) extends TestKit(_system) with 
       system.stop(vm)
     }
   }
-
 }
-

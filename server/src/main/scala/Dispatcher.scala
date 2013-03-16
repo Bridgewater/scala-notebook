@@ -42,9 +42,9 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
         case Open(websock) =>
           logInfo("Opening Socket " + channel + " for " + kernelId + " to " + websock)
           if (channel == "iopub")
-            kernelRouter ! Router.Forward(kernelId, IopubChannel(new WebSockWrapper(websock)))
+            kernelRouter ! Router.Forward(kernelId, IopubChannel(new WebSockWrapperImpl(websock)))
           else if (channel == "shell")
-            kernelRouter ! Router.Forward(kernelId, ShellChannel(new WebSockWrapper(websock)))
+            kernelRouter ! Router.Forward(kernelId, ShellChannel(new WebSockWrapperImpl(websock)))
 
         case Message(socket, Text(msg)) =>
           logDebug("Message for " + kernelId + ":" + msg)

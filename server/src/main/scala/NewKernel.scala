@@ -5,51 +5,48 @@ import akka.actor._
 import client._
 import net.liftweb.json._
 import JsonDSL._
-import java.io.File
-import org.apache.commons.io.FileUtils
-import com.bwater.notebook.util.Logging
+import akka.dispatch.{Await, Promise}
+import kernel.remote.RemoteActorSystem
+import akka.util.duration._
 
 /**
  * Handles all kernel requests.
  */
-class Kernel(initScripts: List[String], compilerArgs: List[String], spawner: (Props, ActorRef) => Unit) extends GuardedActor with akka.actor.ActorLogging {
+sealed trait KernelMessage
+case class SessionRequest(header: JValue, session: JValue, kernelRequest: CalcRequest) extends KernelMessage
+case class IopubChannel(sock: WebSockWrapper) extends KernelMessage
+case class ShellChannel(sock: WebSockWrapper) extends KernelMessage
+case object InterruptKernel extends KernelMessage
 
-  def guard = {
-    case class CalculatorReady(calculator: ActorRef)
 
-    def spawnCalculator() {
+class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: List[String]) {
+  implicit val executor = system.dispatcher
+  val ioPubPromise = Promise[WebSockWrapper]
+  val shellPromise = Promise[WebSockWrapper]
+
+    def spawnCalculator() = {
       // N.B.: without these local copies of the instance variables, we'll capture all sorts of things in our closure
       // that we don't want, then akka's attempts at serialization will fail and kittens everywhere will cry.
       val compilerArgs = this.compilerArgs
       val kInitScripts = initScripts
-      
-      spawner(Props(new ReplCalculator(kInitScripts, compilerArgs)), context.actorOf(Props(new Actor {
-        def receive = {
-          case actor: ActorRef =>
-            Kernel.this.self ! CalculatorReady(actor)
-            context.stop(self)
-        }
-      })))
-    }
 
-    for {
-      iopub & shell <- get { case IopubChannel(sock) => sock } & get { case ShellChannel(sock) => sock }
-      liveKernel = new LiveKernel(iopub, shell)
-      _ = spawnCalculator()
-      calculator <- get { case CalculatorReady(calculator) => calculator }
-      manager = context.actorOf({ val compilerBugWorkaround /* fixed in 2.10 */ = liveKernel; Props(new compilerBugWorkaround.ExecutionManager(calculator)).withDispatcher("akka.actor.default-stash-dispatcher") })
-    } yield {
-      case any => manager.forward(any)
-    }
+      RemoteActorSystem(system, "kernel", Props(new ReplCalculator(kInitScripts, compilerArgs)))
   }
-}
 
-class LiveKernel(iopub: WebSockWrapper, shell: WebSockWrapper) {
+  val executionManager = system.actorOf(Props(new ExecutionManager))
 
-  class ExecutionManager(calculator: ActorRef) extends Actor with Stash {
+  class ExecutionManager extends Actor with ActorLogging {
 
-    context.watch(calculator)
+    // These get filled in before we ever receive messages
+    var iopub:WebSockWrapper = null
+    var shell:WebSockWrapper = null
+    var calculator: ActorRef = null
 
+    override def preStart() {
+      calculator = Await.result( spawnCalculator(), 5 minutes)
+      iopub = Await.result(ioPubPromise.future, 5 minutes)
+      shell = Await.result(shellPromise.future, 5 minutes)
+    }
     private var currentSessionOperation: Option[ActorRef] = None
 
     def receive = {
@@ -58,9 +55,6 @@ class LiveKernel(iopub: WebSockWrapper, shell: WebSockWrapper) {
           calculator.tell(InterruptRequest, op)
         }
       case req@SessionRequest(header, session, request) =>
-        if (currentSessionOperation.isDefined) {
-          stash()
-        } else {
           val operations = new SessionOperationActors(header, session)
           val operationActor = (request: @unchecked) match {
             case ExecuteRequest(counter, code) =>
@@ -78,32 +72,28 @@ class LiveKernel(iopub: WebSockWrapper, shell: WebSockWrapper) {
           context.watch(operation)
           currentSessionOperation = Some(operation)
           calculator.tell(request, operation)
-        }
 
       case Terminated(actor) =>
         if (actor == calculator) {
-          unstashAll()
-          throw new Exception("Calculator crashed; resetting kernel")
+          log.warning("Calculator crashed; restarting calculator")
+          calculator = Await.result( spawnCalculator(), 5 minutes)
         } else {
-          unstashAll()
           currentSessionOperation = None
         }
     }
-  }
 
   class SessionOperationActors(header: JValue, session: JValue) {
-
     def singleExecution(counter: Int) = Props(new Actor {
       def receive = {
         case StreamResponse(data, name) =>
           iopub.send(header, session, "stream", ("data" -> data) ~ ("name" -> name))
-  
+
         case ExecuteResponse(html) =>
           iopub.send(header, session, "pyout", ("execution_count" -> counter) ~ ("data" -> ("text/html" -> html)))
           iopub.send(header, session, "status", ("execution_state" -> "idle"))
           shell.send(header, session, "execute_reply", ("execution_count" -> counter))
           context.stop(self)
-  
+
         case ErrorResponse(msg, incomplete) =>
           if (incomplete) {
             iopub.send(header, session, "pyincomplete", ("execution_count" -> counter) ~ ("status" -> "error"))
@@ -140,4 +130,5 @@ class LiveKernel(iopub: WebSockWrapper, shell: WebSockWrapper) {
       }
     })
   }
+}
 }
