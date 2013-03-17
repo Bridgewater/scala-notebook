@@ -19,6 +19,8 @@ import com.bwater.notebook.util.Logging
 import unfiltered.netty.RequestBinding
 import unfiltered.response._
 import unfiltered.request.Accepts.Accepting
+import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConverters._
 
 /** unfiltered plan */
 class Dispatcher(protected val config: ScalaNotebookConfig,
@@ -35,6 +37,8 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
       case _: Exception => None
     }
   }
+
+  val kernels = new ConcurrentHashMap[String, NewKernel]().asScala
 
   object WebSockets {
     val intent: unfiltered.netty.websockets.Intent = {

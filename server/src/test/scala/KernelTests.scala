@@ -58,7 +58,7 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
       }
 
       def awaitResponse() = Await.result(response(), 10 seconds)
-      def awaitResult() = Await.result(filteredResponse(_ \ "data" != JNothing), 10 seconds) \ "data"
+      def awaitResult() = Await.result(filteredResponse(v => v \ "data" != JNothing && v \ "execution_count" != JNothing), 10 seconds) \ "data"
     }
 
   // Makes a singleton JObject
@@ -81,12 +81,9 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
       for (i <- 1 to 20) {
         calc.sendCode("val a%d = 1 + a%d".format(i+1,i))
       }
-
-      Await.result(calc.io.response(), 10 seconds) must equal(("data"-> "res0: Int = 2\n") ~ ("name" -> "stdout"))
-      Await.result(calc.io.response(), 10 seconds) must equal(("execution_count"-> 1) ~ ("data"-> ("text/html"-> "2")))
-      Await.result(calc.io.response(), 10 seconds) must equal(pair2jvalue("execution_state" ->"idle"))
-      Await.result(calc.shell.response(), 10 seconds) must equal(pair2jvalue("execution_count" -> 1))
+      val results = (1 to 21) map { _ => (calc.io.awaitResult() \ "text/html") }
+      val expected = (1 to 21) map {i => JString("%s".format(i)) }
+      results must equal(expected)
     }
-
   }
 }

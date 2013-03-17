@@ -24,6 +24,7 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
   val ioPubPromise = Promise[WebSockWrapper]
   val shellPromise = Promise[WebSockWrapper]
 
+
     def spawnCalculator() = {
       // N.B.: without these local copies of the instance variables, we'll capture all sorts of things in our closure
       // that we don't want, then akka's attempts at serialization will fail and kittens everywhere will cry.
