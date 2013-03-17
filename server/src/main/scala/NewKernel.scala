@@ -17,6 +17,8 @@ case class SessionRequest(header: JValue, session: JValue, kernelRequest: CalcRe
 case class IopubChannel(sock: WebSockWrapper) extends KernelMessage
 case class ShellChannel(sock: WebSockWrapper) extends KernelMessage
 case object InterruptKernel extends KernelMessage
+case object RestartKernel extends KernelMessage
+case object Shutdown extends KernelMessage
 
 
 class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: List[String]) {
@@ -25,11 +27,6 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
   val shellPromise = Promise[WebSockWrapper]
 
   val executionManager = system.actorOf(Props(new ExecutionManager))
-
-  def shutdown() {
-
-  }
-
 
   class ExecutionManager extends Actor with ActorLogging {
 

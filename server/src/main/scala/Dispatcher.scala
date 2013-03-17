@@ -50,7 +50,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
             if (channel == "iopub")
               kernel.ioPubPromise.success(new WebSockWrapperImpl(websock))
             else if (channel == "shell")
-              kernel.ioPubPromise.success(new WebSockWrapperImpl(websock))
+              kernel.shellPromise.success(new WebSockWrapperImpl(websock))
           }
         case Message(socket, Text(msg)) =>
           for (kernel <- kernels.get(kernelId)) {
@@ -96,7 +96,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
         case Close(websock) =>
           logInfo("Closing Socket " + websock)
           for (kernel <- kernels.get(kernelId)) {
-            kernel.shutdown()
+            kernel.executionManager !
           }
         case Error(s, e) =>
           logError("Websocket error", e)
@@ -209,8 +209,6 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
       JsonContent ~> ResponseString(compact(render(json))) ~> Ok
     }
 
-    def remoteSpawner(key: Any)(props: Props, replyTo: ActorRef) { vmManager.tell(VMManager.Start(key, config.notebooksDir), replyTo); vmManager.tell(VMManager.Spawn(key, props), replyTo)}
-
     val kernelIntent: unfiltered.netty.async.Plan.Intent = {
       case req@POST(Path(Seg("kernels" :: Nil))) =>
         logInfo("Starting kernel")
@@ -218,13 +216,18 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
 
       case req@POST(Path(Seg("kernels" :: kernelId :: "restart" :: Nil))) =>
         logInfo("Restarting kernel " + kernelId)
-        vmManager ! VMManager.Kill(kernelId)
-        kernelRouter ! Router.Remove(kernelId)
-        req.respond(startKernel(UUID.randomUUID.toString))
+        for (kernel <- kernels.get(kernelId)) {
+          kernel.executionManager ! RestartKernel
+        }
+        val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s:%d".format(domain, port))
+        val resp = JsonContent ~> ResponseString(compact(render(json))) ~> Ok
+        req.respond(resp)
 
       case req@POST(Path(Seg("kernels" :: kernelId :: "interrupt" :: Nil))) =>
         logInfo("Interrupting kernel " + kernelId)
-        kernelRouter ! Router.Forward(kernelId, InterruptKernel)
+        for (kernel <- kernels.get(kernelId)) {
+          kernel.executionManager ! InterruptKernel
+        }
         req.respond(PlainTextContent ~> Ok)
     }
 
@@ -327,7 +330,6 @@ trait NotebookSession extends Logging {
   val system = ActorSystem("NotebookServer", AkkaConfigUtils.optSecureCookie(ConfigFactory.load("notebook-server"), akka.util.Crypt.generateSecureCookie))
   logInfo("Notebook session initialized")
   val vmManager = system.actorOf(Props(new VMManager(new Subprocess(config.kernelVMConfig))))
-  val kernelRouter = system.actorOf(Props[Router])
 
   ifDebugEnabled {
     system.eventStream.subscribe(system.actorOf(Props(new Actor {

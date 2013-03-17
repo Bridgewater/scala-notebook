@@ -18,55 +18,55 @@ import org.slf4j.LoggerFactory
 
 class ObservableIntent(vmManager: ActorRef, system: ActorRefFactory) {
 
-  private val router = system.actorOf(Props[Router])
+//  private val router = system.actorOf(Props[Router])
   val log = LoggerFactory.getLogger(getClass())
 
   val webSocketIntent: websockets.Intent = {
     case req @ Path(Seg("observable" :: contextId :: Nil)) => {
       case Open(socket) =>
         log.info("Opening observable WebSocket")
-        system.actorOf(Props(new Actor {
-
-          router ! Router.Put(contextId, context.self)
-
-          val clientToVM = context.actorOf(Props(new GuardedActor {
-            def guard = for {
-              handler <- getType[ActorRef]
-            } yield {
-              case msg:ObservableClientChange =>
-                handler ! msg
-            }
-          }).withDispatcher("akka.actor.default-stash-dispatcher"), "clientToVM")
-
-          locally { // the locally actually matters; prevents serializability shenanigans
-            val vmToClient = context.actorOf(Props(new Actor {
-              def receive = {
-                case ObservableUpdate(obsId, newValue) =>
-                  val respJson = ("id" -> obsId) ~ ("new_value" -> newValue)
-                  socket.send(pretty(render(respJson)))
-              }
-            }), "vmToClient")
-  
-            vmManager.tell(VMManager.Spawn(contextId, Props(new ObservableHandler(vmToClient))), clientToVM)
-          }
-
-          def receive = {
-            case occ: ObservableClientChange => clientToVM.forward(occ)
-          }
-        }))
+//        system.actorOf(Props(new Actor {
+//
+//          router ! Router.Put(contextId, context.self)
+//
+//          val clientToVM = context.actorOf(Props(new GuardedActor {
+//            def guard = for {
+//              handler <- getType[ActorRef]
+//            } yield {
+//              case msg:ObservableClientChange =>
+//                handler ! msg
+//            }
+//          }).withDispatcher("akka.actor.default-stash-dispatcher"), "clientToVM")
+//
+//          locally { // the locally actually matters; prevents serializability shenanigans
+//            val vmToClient = context.actorOf(Props(new Actor {
+//              def receive = {
+//                case ObservableUpdate(obsId, newValue) =>
+//                  val respJson = ("id" -> obsId) ~ ("new_value" -> newValue)
+//                  socket.send(pretty(render(respJson)))
+//              }
+//            }), "vmToClient")
+//
+//            vmManager.tell(VMManager.Spawn(contextId, Props(new ObservableHandler(vmToClient))), clientToVM)
+//          }
+//
+//          def receive = {
+//            case occ: ObservableClientChange => clientToVM.forward(occ)
+//          }
+//        }))
 
 
       case Message(_, Text(msg)) =>
 
-        val json = parse(msg)
-
-        for (JField("id", JString(id)) <- json;
-             JField("new_value", value) <- json) {
-          router ! Router.Forward(contextId, ObservableClientChange(id, value))
-        }
-
+//        val json = parse(msg)
+//
+//        for (JField("id", JString(id)) <- json;
+//             JField("new_value", value) <- json) {
+//          router ! Router.Forward(contextId, ObservableClientChange(id, value))
+//        }
+//
       case Close(_) =>
-        router ! Router.Remove(contextId)
+//        router ! Router.Remove(contextId)
 
       case Error(s, e) =>
     }
