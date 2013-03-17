@@ -6,7 +6,7 @@ import client._
 import net.liftweb.json._
 import JsonDSL._
 import akka.dispatch.{Await, Promise}
-import kernel.remote.RemoteActorSystem
+import kernel.remote.{RemoteSystemInfo, RemoteActorSystem}
 import akka.util.duration._
 
 /**
@@ -24,17 +24,12 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
   val ioPubPromise = Promise[WebSockWrapper]
   val shellPromise = Promise[WebSockWrapper]
 
+  val executionManager = system.actorOf(Props(new ExecutionManager))
 
-    def spawnCalculator() = {
-      // N.B.: without these local copies of the instance variables, we'll capture all sorts of things in our closure
-      // that we don't want, then akka's attempts at serialization will fail and kittens everywhere will cry.
-      val compilerArgs = this.compilerArgs
-      val kInitScripts = initScripts
+  def shutdown() {
 
-      RemoteActorSystem(system, "kernel", Props(new ReplCalculator(kInitScripts, compilerArgs)))
   }
 
-  val executionManager = system.actorOf(Props(new ExecutionManager))
 
   class ExecutionManager extends Actor with ActorLogging {
 
@@ -42,9 +37,20 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
     var iopub:WebSockWrapper = null
     var shell:WebSockWrapper = null
     var calculator: ActorRef = null
+    var remoteInfo: RemoteSystemInfo = null
+
+
+    private def spawnCalculator() = {
+      // N.B.: without these local copies of the instance variables, we'll capture all sorts of things in our closure
+      // that we don't want, then akka's attempts at serialization will fail and kittens everywhere will cry.
+      val kCompilerArgs = compilerArgs
+      val kInitScripts = initScripts
+      remoteInfo = Await.result( RemoteActorSystem(system, "kernel"), 1 minutes)
+      calculator = context.actorOf(Props(new ReplCalculator(kInitScripts, kCompilerArgs)).withDeploy(remoteInfo.deploy))
+    }
 
     override def preStart() {
-      calculator = Await.result( spawnCalculator(), 5 minutes)
+      spawnCalculator()
       iopub = Await.result(ioPubPromise.future, 5 minutes)
       shell = Await.result(shellPromise.future, 5 minutes)
     }
@@ -77,7 +83,7 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
       case Terminated(actor) =>
         if (actor == calculator) {
           log.warning("Calculator crashed; restarting calculator")
-          calculator = Await.result( spawnCalculator(), 5 minutes)
+          spawnCalculator()
         } else {
           currentSessionOperation = None
         }

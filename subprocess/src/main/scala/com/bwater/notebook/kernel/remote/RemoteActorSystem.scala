@@ -62,6 +62,8 @@ class RemoteSystemInfo(localSystem: ActorSystem, info: ProcessInfo) {
 
   def actorOf(context: ActorRefFactory, props: Props) = context.actorOf(props.withDeploy(Deploy(scope = RemoteScope(address))))
 
+  def deploy = Deploy(scope = RemoteScope(address))
+
   def shutdownRemote() { shutdownActor ! RemoteShutdown }
   def killRemote() { info.killer() }
 
@@ -72,5 +74,5 @@ class RemoteSystemInfo(localSystem: ActorSystem, info: ProcessInfo) {
  */
 object RemoteActorSystem {
   def apply(system: ActorSystem, configFile:String): Future[RemoteSystemInfo] = new BetterFork[RemoteActorSystem](system.dispatcher).execute(configFile) map { new RemoteSystemInfo(system, _) }
-  def apply(system: ActorSystem, configFile:String, props: Props): Future[ActorRef] = apply(system, configFile) map { s => system.actorOf(props.withDeploy(Deploy(scope = RemoteScope(s.address)))) }
+  def apply(system: ActorSystem, configFile:String, props: Props): Future[ActorRef] = apply(system, configFile) map { s => system.actorOf(props.withDeploy(s.deploy)) }
 }

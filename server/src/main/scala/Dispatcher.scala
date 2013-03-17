@@ -40,62 +40,64 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
 
   val kernels = new ConcurrentHashMap[String, NewKernel]().asScala
 
+
   object WebSockets {
     val intent: unfiltered.netty.websockets.Intent = {
       case req@Path(Seg("kernels" :: kernelId :: channel :: Nil)) => {
         case Open(websock) =>
-          logInfo("Opening Socket " + channel + " for " + kernelId + " to " + websock)
-          if (channel == "iopub")
-            kernelRouter ! Router.Forward(kernelId, IopubChannel(new WebSockWrapperImpl(websock)))
-          else if (channel == "shell")
-            kernelRouter ! Router.Forward(kernelId, ShellChannel(new WebSockWrapperImpl(websock)))
-
+          for (kernel <- kernels.get(kernelId)) {
+            logInfo("Opening Socket " + channel + " for " + kernelId + " to " + websock)
+            if (channel == "iopub")
+              kernel.ioPubPromise.success(new WebSockWrapperImpl(websock))
+            else if (channel == "shell")
+              kernel.ioPubPromise.success(new WebSockWrapperImpl(websock))
+          }
         case Message(socket, Text(msg)) =>
-          logDebug("Message for " + kernelId + ":" + msg)
+          for (kernel <- kernels.get(kernelId)) {
 
-          def sendRequest(request: Any) = kernelRouter ! Router.Forward(kernelId, request)
+            logDebug("Message for " + kernelId + ":" + msg)
 
-          val json = parse(msg)
+            val json = parse(msg)
 
-          for {
-            JField("header", header) <- json
-            JField("session", session) <- header
-            JField("msg_type", msgType) <- header
-            JField("content", content) <- json
-          } {
-            msgType match {
-              case JString("execute_request") => {
-                for (JField("code", JString(code)) <- content) {
-                  val execCounter = executionCounter.incrementAndGet()
-                  sendRequest(SessionRequest(header, session, ExecuteRequest(execCounter, code)))
+            for {
+              JField("header", header) <- json
+              JField("session", session) <- header
+              JField("msg_type", msgType) <- header
+              JField("content", content) <- json
+            } {
+              msgType match {
+                case JString("execute_request") => {
+                  for (JField("code", JString(code)) <- content) {
+                    val execCounter = executionCounter.incrementAndGet()
+                    kernel.executionManager ! SessionRequest(header, session, ExecuteRequest(execCounter, code))
+                  }
                 }
-              }
 
-              case JString("complete_request") => {
-                for (
-                  JField("line", JString(line)) <- content;
-                  JField("cursor_pos", JInt(cursorPos)) <- content
-                ) {
-
-                  sendRequest(SessionRequest(header, session, CompletionRequest(line, cursorPos.toInt)))
+                case JString("complete_request") => {
+                  for (
+                    JField("line", JString(line)) <- content;
+                    JField("cursor_pos", JInt(cursorPos)) <- content
+                  ) {
+                    kernel.executionManager ! SessionRequest(header, session, CompletionRequest(line, cursorPos.toInt))
+                  }
                 }
-              }
 
-              case JString("object_info_request") => {
-                for (JField("oname", JString(oname)) <- content) {
-                  sendRequest(SessionRequest(header, session, ObjectInfoRequest(oname)))
+                case JString("object_info_request") => {
+                  for (JField("oname", JString(oname)) <- content) {
+                    kernel.executionManager ! SessionRequest(header, session, ObjectInfoRequest(oname))
+                  }
                 }
-              }
 
-              case x => logWarn("Unrecognized websocket message: " + msg) //throw new IllegalArgumentException("Unrecognized message type " + x)
+                case x => logWarn("Unrecognized websocket message: " + msg) //throw new IllegalArgumentException("Unrecognized message type " + x)
+              }
             }
           }
 
         case Close(websock) =>
           logInfo("Closing Socket " + websock)
-          vmManager ! VMManager.Kill(kernelId)
-          kernelRouter ! Router.Remove(kernelId)
-
+          for (kernel <- kernels.get(kernelId)) {
+            kernel.shutdown()
+          }
         case Error(s, e) =>
           logError("Websocket error", e)
       }
@@ -202,11 +204,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
     def startKernel(kernelId: String) = {
       val compilerArgs = config.kernelCompilerArgs
       val initScripts = config.kernelInitScripts
-      // Load the user script from disk every time, so user changes are applied whenever a kernel is started/restarted.
-      def kernelMaker = new Kernel(initScripts, compilerArgs, remoteSpawner(kernelId))
-
-      //TODO: this is a potential memory leak, if the websocket is never opened the router will never be removed...
-      kernelRouter ! Router.Put(kernelId, system.actorOf(Props(kernelMaker).withDispatcher("akka.actor.default-stash-dispatcher")))
+      kernels += (kernelId -> new NewKernel(system,initScripts, compilerArgs ))
       val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s:%d".format(domain, port))
       JsonContent ~> ResponseString(compact(render(json))) ~> Ok
     }
