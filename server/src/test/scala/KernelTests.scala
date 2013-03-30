@@ -27,7 +27,7 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
 
   def this() = this(ActorSystem("MySpec", AkkaConfigUtils.requireCookie(ConfigFactory.load("subprocess-test"), "Cookie")))
 
-  implicit val defaultTimeout: Timeout = 10 seconds
+  implicit val defaultTimeout: Timeout = 20 seconds
 
 
   class CalcTester {

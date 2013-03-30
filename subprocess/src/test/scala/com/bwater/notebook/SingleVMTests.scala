@@ -9,7 +9,7 @@ package com.bwater.notebook
 
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestKit}
-import kernel.remote.SingleVM
+import kernel.remote.{RemoteActorSystem, SingleVM}
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
 import org.scalatest.matchers.MustMatchers
 import akka.util.duration._
@@ -52,27 +52,25 @@ class SingleVMTests extends TestKit(ActorSystem("SingleVMTests", ConfigFactory.l
     }
 
     "restart after an actor death" in {
-      val vm = system.actorOf(Props[SingleVM])
+      val remote = Await.result(RemoteActorSystem.spawn(system, "kernel.conf"), 10 seconds)
+      val tester = remote.actorOf(system, Props(new RemoteActor(5)))
 
-      val remote = Await.result(spawn(vm, new RemoteActor(5)), 5 seconds)
-
-      remote ! 10
+      tester ! 10
 
       assert(receiveOne(1 second) === 50)
 
-      remote ! -1
+      tester ! -1
 
       assert(retryUntilReceive(2, 1 second) {
-        remote ! 5
+        tester ! 5
       } === Some(25))
 
-      system.stop(vm)
+      remote.shutdownRemote()
     }
 
     "restart after a process termination" in {
-      val vm = system.actorOf(Props[SingleVM])
-
-      val remote = Await.result(spawn(vm, new RemoteActor(5)), 5 seconds)
+      val remotes = Await.result(RemoteActorSystem.spawn(system, "kernel.conf"), 10 seconds)
+      val remote = remotes.actorOf(system, Props(new RemoteActor(5)))
 
       remote ! 10
 
@@ -84,7 +82,7 @@ class SingleVMTests extends TestKit(ActorSystem("SingleVMTests", ConfigFactory.l
         remote ! 5
       } === Some(25))
 
-      system.stop(vm)
+      remotes.shutdownRemote()
     }
 
     "not affect each other" ignore { //Does not work in CI

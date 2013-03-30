@@ -37,7 +37,7 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
     var iopub:WebSockWrapper = null
     var shell:WebSockWrapper = null
     var calculator: ActorRef = null
-    var remoteInfo: RemoteSystemInfo = null
+    var remoteInfo: RemoteActorSystem = null
 
 
     private def spawnCalculator() = {
@@ -45,7 +45,7 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
       // that we don't want, then akka's attempts at serialization will fail and kittens everywhere will cry.
       val kCompilerArgs = compilerArgs
       val kInitScripts = initScripts
-      remoteInfo = Await.result( RemoteActorSystem(system, "kernel"), 1 minutes)
+      remoteInfo = Await.result( RemoteActorSystem.spawn(system, "kernel"), 1 minutes)
       calculator = context.actorOf(Props(new ReplCalculator(kInitScripts, kCompilerArgs)).withDeploy(remoteInfo.deploy))
     }
 
