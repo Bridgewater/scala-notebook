@@ -11,18 +11,21 @@ import akka.actor._
 import com.typesafe.config.ConfigFactory
 import akka.remote.{RemoteScope, RemoteActorRefProvider}
 import akka.dispatch.Future
+import java.io.File
+import org.apache.commons.io.FileUtils
 
 /**
  * Author: Ken
  */
-class RemoteActorSystem extends ForkableProcess{
+class RemoteActorProcess extends ForkableProcess{
   // http://stackoverflow.com/questions/14995834/programmatically-obtain-ephemeral-port-with-akka
   var _system: ActorSystem = null
 
   def init(args: Seq[String]): String = {
-    val configFile: String = args.headOption getOrElse(sys.error("Config file is required for RemoteActorSystem"))
+    val Seq(configFile, cookieFile) = args
+    val cookie = FileUtils.readFileToString(new File(cookieFile))
     val cfg = ConfigFactory.load(configFile)
-    _system = ActorSystem("Remote", AkkaConfigUtils.requireCookie(cfg, "Cookie"))
+    _system = ActorSystem("Remote", AkkaConfigUtils.requireCookie(cfg, cookie))
     // TODO: In akka 2.1, just use _system.provider.getDefaultAddress
 
     val address = GetAddress(_system).address
@@ -56,7 +59,7 @@ class ShutdownActor extends Actor {
 /**
  * Represents a running remote actor system, with an address and the ability to kill it
  */
-class RemoteSystemInfo(localSystem: ActorSystem, info: ProcessInfo) {
+class RemoteActorSystem(localSystem: ActorSystem, info: ProcessInfo) {
   val address = AddressFromURIString(info.initReturn)
   val shutdownActor = localSystem.actorOf(Props(new ShutdownActor).withDeploy(Deploy(scope = RemoteScope(address))))
 
@@ -65,7 +68,7 @@ class RemoteSystemInfo(localSystem: ActorSystem, info: ProcessInfo) {
   def deploy = Deploy(scope = RemoteScope(address))
 
   def shutdownRemote() { shutdownActor ! RemoteShutdown }
-  def killRemote() { info.killer() }
+  def killRemote() { info.kill() }
 
 }
 
@@ -73,6 +76,13 @@ class RemoteSystemInfo(localSystem: ActorSystem, info: ProcessInfo) {
  * Create a remote actor system
  */
 object RemoteActorSystem {
-  def apply(system: ActorSystem, configFile:String): Future[RemoteSystemInfo] = new BetterFork[RemoteActorSystem](system.dispatcher).execute(configFile) map { new RemoteSystemInfo(system, _) }
-  def apply(system: ActorSystem, configFile:String, props: Props): Future[ActorRef] = apply(system, configFile) map { s => system.actorOf(props.withDeploy(s.deploy)) }
+  def spawn(system: ActorSystem, configFile:String): Future[RemoteActorSystem] = {
+    //TODO: cookie file should only be written once.
+    val akkaCookieFile = new File(".", ".akka-cookie")
+    for (cookie <- AkkaConfigUtils.requiredCookie(system.settings.config)) {
+      FileUtils.writeStringToFile(akkaCookieFile, cookie)
+    }
+    new BetterFork[RemoteActorProcess](system.dispatcher).execute(configFile, akkaCookieFile.getAbsolutePath) map { new RemoteActorSystem(system, _) }
+  }
+//  def apply(system: ActorSystem, configFile:String, props: Props): Future[ActorRef] = apply(system, configFile) map { s => system.actorOf(props.withDeploy(s.deploy)) }
 }

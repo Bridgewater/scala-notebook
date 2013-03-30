@@ -6,7 +6,7 @@ import client._
 import net.liftweb.json._
 import JsonDSL._
 import akka.dispatch.{Await, Promise}
-import kernel.remote.{RemoteSystemInfo, RemoteActorSystem}
+import kernel.remote.{RemoteActorSystem, RemoteActorProcess}
 import akka.util.duration._
 
 /**

@@ -116,7 +116,9 @@ class BetterFork[A <: ForkableProcess : Manifest](executionContext: ExecutionCon
   }
 }
 
-class ProcessInfo(val killer: () => Unit, val initReturn: String, val completion: Future[Int])
+class ProcessInfo(killer: () => Unit, val initReturn: String, val completion: Future[Int]) {
+  def kill() { killer() }
+}
 
 object BetterFork {
 
