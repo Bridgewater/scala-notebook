@@ -50,7 +50,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
             if (channel == "iopub")
               kernel.ioPubPromise.success(new WebSockWrapperImpl(websock))
             else if (channel == "shell")
-              kernel.ioPubPromise.success(new WebSockWrapperImpl(websock))
+              kernel.shellPromise.success(new WebSockWrapperImpl(websock))
           }
         case Message(socket, Text(msg)) =>
           for (kernel <- kernels.get(kernelId)) {
