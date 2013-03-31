@@ -81,8 +81,8 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
           calculator.tell(request, operation)
 
       case Terminated(actor) =>
+        log.warning("Termination")
         if (actor == calculator) {
-          log.warning("Calculator crashed; restarting calculator")
           spawnCalculator()
         } else {
           currentSessionOperation = None

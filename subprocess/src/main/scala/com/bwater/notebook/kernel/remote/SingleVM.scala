@@ -134,9 +134,9 @@ object SingleVM {
 
 class RemoteProcess(port: String, parentPath: String, cookieFile: String, configPath: String) {
 
-  def this(port: String, parentPath: String, cookieFile: String) = this(port, parentPath, cookieFile, configPath = "kernel.conf")
+  def this(port: String, parentPath: String, cookieFile: String) = this(port, parentPath, cookieFile, "kernel.conf")
   
-  def this(port: String, parentPath: String) = this(port, parentPath, cookieFile = "")
+  def this(port: String, parentPath: String) = this(port, parentPath, "")
 
   locally {
     //TODO: This doesn't really belong here?

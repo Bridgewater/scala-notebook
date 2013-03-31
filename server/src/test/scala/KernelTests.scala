@@ -75,6 +75,12 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
       Await.result(calc.shell.response(), 10 seconds) must equal(pair2jvalue("execution_count" -> 1))
     }
 
+    "Report actor death" in {
+      val calc = new CalcTester
+      calc.sendCode("sys.exit(1)")
+      calc.io.awaitResult()
+    }
+
     "Execute calculations in order" in {
       val calc = new CalcTester
       calc.sendCode("val a1 = 1")
@@ -85,5 +91,7 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
       val expected = (1 to 21) map {i => JString("%s".format(i)) }
       results must equal(expected)
     }
+
+
   }
 }

@@ -13,6 +13,7 @@ import akka.remote.{RemoteScope, RemoteActorRefProvider}
 import akka.dispatch.Future
 import java.io.File
 import org.apache.commons.io.FileUtils
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Author: Ken
@@ -22,11 +23,18 @@ class RemoteActorProcess extends ForkableProcess{
   var _system: ActorSystem = null
 
   def init(args: Seq[String]): String = {
-    val Seq(configFile, cookieFile) = args
-    val cookie = FileUtils.readFileToString(new File(cookieFile))
+    val configFile = args(0)
     val cfg = ConfigFactory.load(configFile)
-    _system = ActorSystem("Remote", AkkaConfigUtils.requireCookie(cfg, cookie))
-    // TODO: In akka 2.1, just use _system.provider.getDefaultAddress
+
+    // Cookie file is optional second argument
+    val actualCfg = args match {
+      case Seq(_, cookieFile) if (cookieFile.size > 0) =>
+        val cookie = FileUtils.readFileToString(new File(cookieFile))
+        AkkaConfigUtils.requireCookie(cfg, cookie)
+      case _ => cfg
+    }
+
+    _system = ActorSystem("Remote", actualCfg)
 
     val address = GetAddress(_system).address
     println(address)
@@ -76,13 +84,15 @@ class RemoteActorSystem(localSystem: ActorSystem, info: ProcessInfo) {
  * Create a remote actor system
  */
 object RemoteActorSystem {
+  val nextId = new AtomicInteger(1)
   def spawn(system: ActorSystem, configFile:String): Future[RemoteActorSystem] = {
-    //TODO: cookie file should only be written once.
-    val akkaCookieFile = new File(".", ".akka-cookie")
-    for (cookie <- AkkaConfigUtils.requiredCookie(system.settings.config)) {
-      FileUtils.writeStringToFile(akkaCookieFile, cookie)
+    val cookiePath = AkkaConfigUtils.requiredCookie(system.settings.config) match {
+      case Some(cookie) =>
+        val cookieFile = new File(".", ".akka-cookie")
+        FileUtils.writeStringToFile(cookieFile, cookie)
+        cookieFile.getAbsolutePath
+      case _ => ""
     }
-    new BetterFork[RemoteActorProcess](system.dispatcher).execute(configFile, akkaCookieFile.getAbsolutePath) map { new RemoteActorSystem(system, _) }
+    new BetterFork[RemoteActorProcess](system.dispatcher).execute(configFile, cookiePath) map { new RemoteActorSystem(system, _) }
   }
-//  def apply(system: ActorSystem, configFile:String, props: Props): Future[ActorRef] = apply(system, configFile) map { s => system.actorOf(props.withDeploy(s.deploy)) }
 }
