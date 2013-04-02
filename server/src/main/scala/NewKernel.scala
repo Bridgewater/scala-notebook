@@ -28,6 +28,8 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
 
   val executionManager = system.actorOf(Props(new ExecutionManager))
 
+  def shutdown() { executionManager ! PoisonPill  }
+
   class ExecutionManager extends Actor with ActorLogging {
 
     // These get filled in before we ever receive messages
@@ -51,6 +53,11 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
       iopub = Await.result(ioPubPromise.future, 5 minutes)
       shell = Await.result(shellPromise.future, 5 minutes)
     }
+    override def postStop() {
+      if (remoteInfo != null)
+        remoteInfo.shutdownRemote()
+    }
+
     private var currentSessionOperation: Option[ActorRef] = None
 
     def receive = {

@@ -96,7 +96,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
         case Close(websock) =>
           logInfo("Closing Socket " + websock)
           for (kernel <- kernels.get(kernelId)) {
-            kernel.executionManager !
+            kernel.shutdown()
           }
         case Error(s, e) =>
           logError("Websocket error", e)
