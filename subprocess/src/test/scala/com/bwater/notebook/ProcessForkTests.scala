@@ -4,7 +4,7 @@ import akka.testkit.{ImplicitSender, TestKit}
 import akka.actor.{Actor, Props, ActorSystem}
 import com.typesafe.config.ConfigFactory
 import kernel.pfork.{BetterFork, ForkableProcess, ProcessFork}
-import kernel.remote.{RemoteActorSystem, AkkaConfigUtils}
+import kernel.remote.{RemoteActorSystem,  AkkaConfigUtils}
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
 import org.scalatest.matchers.MustMatchers
 import akka.dispatch.{Await, Future, Promise}
@@ -41,7 +41,7 @@ class ProcessForkTests(_system: ActorSystem) extends TestKit(_system) with Impli
     }
 
 
-    "Handle remote crashing" in {
+    "Handle remote crashing on initialize" in {
       val fork = new BetterFork[CrasherProcess](_system.dispatcher)
       evaluating { Await.result(fork.execute(), 5 seconds) } must produce [ExecuteException]
     }
@@ -49,7 +49,7 @@ class ProcessForkTests(_system: ActorSystem) extends TestKit(_system) with Impli
 
   "RemoteActorSystem" must {
     "Create a simple actor" in {
-      val remote = Await.result(RemoteActorSystem(_system, "subprocess-test"), 5 seconds)
+      val remote = Await.result(RemoteActorSystem.spawn(_system, "subprocess-test"), 5 seconds)
 
       val actor = remote.actorOf(_system, Props(new Actor{
         protected def receive = {

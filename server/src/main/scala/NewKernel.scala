@@ -6,7 +6,7 @@ import client._
 import net.liftweb.json._
 import JsonDSL._
 import akka.dispatch.{Await, Promise}
-import kernel.remote.{RemoteSystemInfo, RemoteActorSystem}
+import kernel.remote.{RemoteActorSystem, RemoteActorProcess}
 import akka.util.duration._
 
 /**
@@ -34,7 +34,7 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
     var iopub:WebSockWrapper = null
     var shell:WebSockWrapper = null
     var calculator: ActorRef = null
-    var remoteInfo: RemoteSystemInfo = null
+    var remoteInfo: RemoteActorSystem = null
 
 
     private def spawnCalculator() = {
@@ -42,7 +42,7 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
       // that we don't want, then akka's attempts at serialization will fail and kittens everywhere will cry.
       val kCompilerArgs = compilerArgs
       val kInitScripts = initScripts
-      remoteInfo = Await.result( RemoteActorSystem(system, "kernel"), 1 minutes)
+      remoteInfo = Await.result( RemoteActorSystem.spawn(system, "kernel"), 1 minutes)
       calculator = context.actorOf(Props(new ReplCalculator(kInitScripts, kCompilerArgs)).withDeploy(remoteInfo.deploy))
     }
 
@@ -78,8 +78,8 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
           calculator.tell(request, operation)
 
       case Terminated(actor) =>
+        log.warning("Termination")
         if (actor == calculator) {
-          log.warning("Calculator crashed; restarting calculator")
           spawnCalculator()
         } else {
           currentSessionOperation = None

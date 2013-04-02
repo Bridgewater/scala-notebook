@@ -21,6 +21,7 @@ import akka.dispatch.{Promise, ExecutionContext, Await, Future}
 import akka.util.Duration
 import collection.mutable.ListBuffer
 import java.util.concurrent.Executors
+import org.apache.log4j.PropertyConfigurator
 
 trait ForkableProcess {
   /**
@@ -115,7 +116,9 @@ class BetterFork[A <: ForkableProcess : Manifest](executionContext: ExecutionCon
   }
 }
 
-class ProcessInfo(val killer: () => Unit, val initReturn: String, val completion: Future[Int])
+class ProcessInfo(killer: () => Unit, val initReturn: String, val completion: Future[Int]) {
+  def kill() { killer() }
+}
 
 object BetterFork {
 
@@ -153,6 +156,8 @@ object BetterFork {
   private[pfork] def main(args: Array[String]) {
     val className = args(0)
     val parentPort = args(1).toInt
+
+    PropertyConfigurator.configure(getClass().getResource("/log4j.subprocess.properties"))
 
     log.info("Remote process starting")
     val socket = new Socket("127.0.0.1", parentPort)
