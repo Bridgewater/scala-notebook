@@ -64,7 +64,11 @@ object Server extends Logging {
     val security = if (secure) new ClientAuth(host, port) else Insecure
 
     startServer(config, host, port, security) {
-      (http, app) => startAction("http://%s:%d/%s".format(host, port, security.loginPath))
+      (http, app) => {
+        val url = "http://%s:%d/%s".format(host, port, security.loginPath)
+        println("Launching server at %s".format(url))
+        startAction(url)
+      }
     }
   }
 
