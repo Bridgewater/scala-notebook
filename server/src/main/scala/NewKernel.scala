@@ -28,7 +28,9 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
 
   val executionManager = system.actorOf(Props(new ExecutionManager))
 
-  def shutdown() { executionManager ! PoisonPill  }
+  case object ShutdownNow
+
+  def shutdown() { executionManager ! ShutdownNow  }
 
   class ExecutionManager extends Actor with ActorLogging {
 
@@ -54,9 +56,11 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
       shell = Await.result(shellPromise.future, 5 minutes)
     }
     override def postStop() {
+      // TODO:  This doesnt' work - too late, need to do it without actors
       if (remoteInfo != null)
         remoteInfo.shutdownRemote()
     }
+
 
     private var currentSessionOperation: Option[ActorRef] = None
 
@@ -83,6 +87,11 @@ class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: Li
           context.watch(operation)
           currentSessionOperation = Some(operation)
           calculator.tell(request, operation)
+
+      case ShutdownNow =>
+        if (remoteInfo != null) {
+          remoteInfo.shutdownRemote()
+        }
 
       case Terminated(actor) =>
         log.warning("Termination")

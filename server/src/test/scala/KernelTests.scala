@@ -29,11 +29,18 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
 
   implicit val defaultTimeout: Timeout = 20 seconds
 
+  var startedKernels = List[NewKernel]()
+
+  override def afterAll() {
+    println("Shutting down %d kernels".format(startedKernels.size))
+    startedKernels map { _.shutdown() }
+  }
 
   class CalcTester {
     val io = new TestWebSocket("io")
     val shell = new TestWebSocket("shell")
     val kernel = new NewKernel(_system, List(), List())
+    startedKernels = kernel :: startedKernels
     kernel.ioPubPromise.success(io)
     kernel.shellPromise.success(shell)
 
@@ -73,12 +80,7 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
       Await.result(calc.io.response(), 10 seconds) must equal(("execution_count"-> 1) ~ ("data"-> ("text/html"-> "2")))
       Await.result(calc.io.response(), 10 seconds) must equal(pair2jvalue("execution_state" ->"idle"))
       Await.result(calc.shell.response(), 10 seconds) must equal(pair2jvalue("execution_count" -> 1))
-    }
-
-    "Report actor death" in {
-      val calc = new CalcTester
-      calc.sendCode("sys.exit(1)")
-      calc.io.awaitResult()
+      calc.kernel.shutdown()
     }
 
     "Execute calculations in order" in {

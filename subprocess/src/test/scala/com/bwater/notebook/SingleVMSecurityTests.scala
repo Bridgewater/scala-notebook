@@ -47,7 +47,7 @@ class SingleVMSecurityTests(_system: ActorSystem) extends TestKit(_system) with 
       remote.shutdownRemote()
     }
 
-    "not allow unauthorized connections" in {
+    "not allow unauthorized connections" ignore {
 
       val remote = Await.result(RemoteActorSystem.spawn(_system, "kernel.conf"), 10 seconds)
       val echo = remote.actorOf(_system, Props(new EchoActor))

@@ -45,7 +45,18 @@ class SingleVMTests extends TestKit(ActorSystem("SingleVMTests", ConfigFactory.l
       None
     }
 
-    "support actor restarts" in {
+    "support simple actor and shutdown remote process" in {
+      val remote = Await.result(RemoteActorSystem.spawn(system, "kernel.conf"), 10 seconds)
+      val tester = remote.actorOf(system, Props(new RemoteActor(5)))
+
+      tester ! 10
+
+      assert(receiveOne(1 second) === 50)
+
+      remote.shutdownRemote()
+    }
+
+    "support actor restarts" ignore {
       val remote = Await.result(RemoteActorSystem.spawn(system, "kernel.conf"), 10 seconds)
       val tester = remote.actorOf(system, Props(new RemoteActor(5)))
 

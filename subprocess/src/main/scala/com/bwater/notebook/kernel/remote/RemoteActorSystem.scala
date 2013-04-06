@@ -37,13 +37,13 @@ class RemoteActorProcess extends ForkableProcess{
     _system = ActorSystem("Remote", actualCfg)
 
     val address = GetAddress(_system).address
-    println(address)
     address.toString
 //    address.port.get?OrElse(sys.error("not a remote actor system: %s".format(cfg))).toString
   }
 
   def waitForExit() {
     _system.awaitTermination()
+    println("waitForExit complete")
   }
 }
 
@@ -58,24 +58,30 @@ object GetAddress extends ExtensionKey[FindAddressImpl]
 case object RemoteShutdown
 
 class ShutdownActor extends Actor {
-  protected def receive = {
-    case RemoteShutdown => context.system.shutdown()
+  override def postStop() {
+    // We tried to do a context.system.shutdown() here, but the system would often hang when multiple actors were in play.
+    //  I think it was this issue: https://groups.google.com/forum/#!msg/akka-user/VmKMPI_tNQU/ZUSz25OBpIwJ
+    // So we take the hard way out
+    sys.exit(0)
   }
 
+  protected def receive = Map.empty
 }
 
 /**
  * Represents a running remote actor system, with an address and the ability to kill it
  */
-class RemoteActorSystem(localSystem: ActorSystem, info: ProcessInfo) {
+class RemoteActorSystem(localSystem: ActorSystem, info: ProcessInfo, remoteContext: ActorRefFactory) {
+  def this(localSystem: ActorSystem, info: ProcessInfo) = this(localSystem, info, localSystem)
+
   val address = AddressFromURIString(info.initReturn)
-  val shutdownActor = localSystem.actorOf(Props(new ShutdownActor).withDeploy(Deploy(scope = RemoteScope(address))))
+  val shutdownActor = remoteContext.actorOf(Props(new ShutdownActor).withDeploy(Deploy(scope = RemoteScope(address))))
 
   def actorOf(context: ActorRefFactory, props: Props) = context.actorOf(props.withDeploy(Deploy(scope = RemoteScope(address))))
 
   def deploy = Deploy(scope = RemoteScope(address))
 
-  def shutdownRemote() { shutdownActor ! RemoteShutdown }
+  def shutdownRemote() { shutdownActor ! PoisonPill }
   def killRemote() { info.kill() }
 
 }
