@@ -9,8 +9,7 @@ package com.bwater.notebook
 
 import net.liftweb.json._
 
-// js -> scala
-case class ObservableClientChange(id: String, newValue: JValue)
+trait ObservableMessage
+case class ObservableBrowserToVM(id: String, newValue: JValue) extends ObservableMessage
+case class ObservableVMToBrowser(id: String, update: JValue) extends ObservableMessage
 
-// scala -> js
-case class ObservableUpdate(id: String, update: JValue)

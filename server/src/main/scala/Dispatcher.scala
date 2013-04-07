@@ -38,14 +38,12 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
     }
   }
 
-  val kernels = new ConcurrentHashMap[String, Kernel]().asScala
-
 
   object WebSockets {
     val intent: unfiltered.netty.websockets.Intent = {
       case req@Path(Seg("kernels" :: kernelId :: channel :: Nil)) => {
         case Open(websock) =>
-          for (kernel <- kernels.get(kernelId)) {
+          for (kernel <- KernelManager.get(kernelId)) {
             logInfo("Opening Socket " + channel + " for " + kernelId + " to " + websock)
             if (channel == "iopub")
               kernel.ioPubPromise.success(new WebSockWrapperImpl(websock))
@@ -53,7 +51,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
               kernel.shellPromise.success(new WebSockWrapperImpl(websock))
           }
         case Message(socket, Text(msg)) =>
-          for (kernel <- kernels.get(kernelId)) {
+          for (kernel <- KernelManager.get(kernelId)) {
 
             logDebug("Message for " + kernelId + ":" + msg)
 
@@ -95,7 +93,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
 
         case Close(websock) =>
           logInfo("Closing Socket " + websock)
-          for (kernel <- kernels.get(kernelId)) {
+          for (kernel <- KernelManager.get(kernelId)) {
             kernel.shutdown()
           }
         case Error(s, e) =>
@@ -204,7 +202,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
     def startKernel(kernelId: String) = {
       val compilerArgs = config.kernelCompilerArgs
       val initScripts = config.kernelInitScripts
-      kernels += (kernelId -> new Kernel(system,initScripts, compilerArgs ))
+      KernelManager.add(kernelId, new Kernel(system,initScripts, compilerArgs ))
       val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s:%d".format(domain, port))
       JsonContent ~> ResponseString(compact(render(json))) ~> Ok
     }
@@ -216,7 +214,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
 
       case req@POST(Path(Seg("kernels" :: kernelId :: "restart" :: Nil))) =>
         logInfo("Restarting kernel " + kernelId)
-        for (kernel <- kernels.get(kernelId)) {
+        for (kernel <- KernelManager.get(kernelId)) {
           kernel.executionManager ! RestartKernel
         }
         val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s:%d".format(domain, port))
@@ -225,8 +223,8 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
 
       case req@POST(Path(Seg("kernels" :: kernelId :: "interrupt" :: Nil))) =>
         logInfo("Interrupting kernel " + kernelId)
-        for (kernel <- kernels.get(kernelId)) {
-          kernel.executionManager ! InterruptKernel
+        for (kernel <- KernelManager.get(kernelId)) {
+          kernel.executionManager ! InterruptCalculator
         }
         req.respond(PlainTextContent ~> Ok)
     }
