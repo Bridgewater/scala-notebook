@@ -38,7 +38,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
     }
   }
 
-  val kernels = new ConcurrentHashMap[String, NewKernel]().asScala
+  val kernels = new ConcurrentHashMap[String, Kernel]().asScala
 
 
   object WebSockets {
@@ -204,7 +204,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
     def startKernel(kernelId: String) = {
       val compilerArgs = config.kernelCompilerArgs
       val initScripts = config.kernelInitScripts
-      kernels += (kernelId -> new NewKernel(system,initScripts, compilerArgs ))
+      kernels += (kernelId -> new Kernel(system,initScripts, compilerArgs ))
       val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s:%d".format(domain, port))
       JsonContent ~> ResponseString(compact(render(json))) ~> Ok
     }

@@ -7,7 +7,7 @@ import com.bwater.notebook.client.ExecuteRequest
 import com.bwater.notebook.client.{ExecuteResponse, ExecuteRequest}
 import com.bwater.notebook.kernel.remote.AkkaConfigUtils
 import com.bwater.notebook.server.SessionRequest
-import com.bwater.notebook.server.{SessionRequest, NewKernel, WebSockWrapper}
+import com.bwater.notebook.server.{SessionRequest, Kernel, WebSockWrapper}
 import com.typesafe.config.ConfigFactory
 import java.util.concurrent.{LinkedBlockingQueue, ArrayBlockingQueue, BlockingQueue}
 import net.liftweb.json.JsonAST.JInt
@@ -29,7 +29,7 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
 
   implicit val defaultTimeout: Timeout = 20 seconds
 
-  var startedKernels = List[NewKernel]()
+  var startedKernels = List[Kernel]()
 
   override def afterAll() {
     println("Shutting down %d kernels".format(startedKernels.size))
@@ -39,7 +39,7 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
   class CalcTester {
     val io = new TestWebSocket("io")
     val shell = new TestWebSocket("shell")
-    val kernel = new NewKernel(_system, List(), List())
+    val kernel = new Kernel(_system, List(), List())
     startedKernels = kernel :: startedKernels
     kernel.ioPubPromise.success(io)
     kernel.shellPromise.success(shell)

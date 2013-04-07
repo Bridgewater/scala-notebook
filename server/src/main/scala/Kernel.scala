@@ -21,7 +21,7 @@ case object RestartKernel extends KernelMessage
 case object Shutdown extends KernelMessage
 
 
-class NewKernel(system: ActorSystem, initScripts: List[String], compilerArgs: List[String]) {
+class Kernel(system: ActorSystem, initScripts: List[String], compilerArgs: List[String]) {
   implicit val executor = system.dispatcher
   val ioPubPromise = Promise[WebSockWrapper]
   val shellPromise = Promise[WebSockWrapper]
