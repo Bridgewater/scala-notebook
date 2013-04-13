@@ -24,7 +24,7 @@ return new function () {
         this.channelID = IPython.notebook.kernel.kernel_id
         this.channel = new this.WebSocket(ws_url + '/' + IPython.notebook.kernel.kernel_id); // TODO: This is a hack, obviously; fix when we support observable stuff outside of Scala Notebook
         send_cookie = function(){
-            this.send(document.cookie);
+            this.send(JSON.stringify({ cookie: document.cookie }));
         };
         var already_called_onclose = false; // only alert once
         ws_closed_early = function(evt){
