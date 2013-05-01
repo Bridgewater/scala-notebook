@@ -67,7 +67,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
                 case JString("execute_request") => {
                   for (JField("code", JString(code)) <- content) {
                     val execCounter = executionCounter.incrementAndGet()
-                    kernel.executionManager ! SessionRequest(header, session, ExecuteRequest(execCounter, code))
+                    kernel.router ! SessionRequest(header, session, ExecuteRequest(execCounter, code))
                   }
                 }
 
@@ -76,13 +76,13 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
                     JField("line", JString(line)) <- content;
                     JField("cursor_pos", JInt(cursorPos)) <- content
                   ) {
-                    kernel.executionManager ! SessionRequest(header, session, CompletionRequest(line, cursorPos.toInt))
+                    kernel.router ! SessionRequest(header, session, CompletionRequest(line, cursorPos.toInt))
                   }
                 }
 
                 case JString("object_info_request") => {
                   for (JField("oname", JString(oname)) <- content) {
-                    kernel.executionManager ! SessionRequest(header, session, ObjectInfoRequest(oname))
+                    kernel.router ! SessionRequest(header, session, ObjectInfoRequest(oname))
                   }
                 }
 
@@ -215,7 +215,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
       case req@POST(Path(Seg("kernels" :: kernelId :: "restart" :: Nil))) =>
         logInfo("Restarting kernel " + kernelId)
         for (kernel <- KernelManager.get(kernelId)) {
-          kernel.executionManager ! RestartKernel
+          kernel.router ! RestartKernel
         }
         val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s:%d".format(domain, port))
         val resp = JsonContent ~> ResponseString(compact(render(json))) ~> Ok
@@ -224,7 +224,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
       case req@POST(Path(Seg("kernels" :: kernelId :: "interrupt" :: Nil))) =>
         logInfo("Interrupting kernel " + kernelId)
         for (kernel <- KernelManager.get(kernelId)) {
-          kernel.executionManager ! InterruptCalculator
+          kernel.router ! InterruptCalculator
         }
         req.respond(PlainTextContent ~> Ok)
     }

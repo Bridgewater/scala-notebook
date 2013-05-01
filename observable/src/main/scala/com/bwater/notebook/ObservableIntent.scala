@@ -16,7 +16,7 @@ import net.liftweb.json.JsonAST.{JString, JField}
 import net.liftweb.json._, JsonDSL._
 import org.slf4j.LoggerFactory
 
-class ObservableIntent(vmManager: ActorRef, system: ActorRefFactory) {
+class ObservableIntent(system: ActorRefFactory, onSocketOpen: (String, WebSocket) => Unit, remoteGetter: String => Option[ActorRef]) {
 
 //  private val router = system.actorOf(Props[Router])
   val log = LoggerFactory.getLogger(getClass())
@@ -24,9 +24,9 @@ class ObservableIntent(vmManager: ActorRef, system: ActorRefFactory) {
   val webSocketIntent: websockets.Intent = {
     case req @ Path(Seg("observable" :: contextId :: Nil)) => {
       case Open(socket) =>
-        log.info("Opening observable WebSocket")
+        for (router <- routerGetter(contextId)) {
 
-        system.actorOf(Props(new Actor {
+          system.actorOf(Props(new Actor {
 
           router ! Router.Put(contextId, context.self)
 
