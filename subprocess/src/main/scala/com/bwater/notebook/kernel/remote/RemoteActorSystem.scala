@@ -59,9 +59,9 @@ case object RemoteShutdown
 
 class ShutdownActor extends Actor {
   override def postStop() {
-    // We tried to do a context.system.shutdown() here, but the system would often hang when multiple actors were in play.
+    // KV: I tried to do a context.system.shutdown() here, but the system would often hang when multiple actors were in play.
     //  I think it was this issue: https://groups.google.com/forum/#!msg/akka-user/VmKMPI_tNQU/ZUSz25OBpIwJ
-    // So we take the hard way out
+    // So we take the hard way out. Would be nice to have graceful shutdown
     sys.exit(0)
   }
 
@@ -75,11 +75,12 @@ class RemoteActorSystem(localSystem: ActorSystem, info: ProcessInfo, remoteConte
   def this(localSystem: ActorSystem, info: ProcessInfo) = this(localSystem, info, localSystem)
 
   val address = AddressFromURIString(info.initReturn)
+
   val shutdownActor = remoteContext.actorOf(Props(new ShutdownActor).withDeploy(Deploy(scope = RemoteScope(address))))
 
-  def actorOf(context: ActorRefFactory, props: Props) = context.actorOf(props.withDeploy(Deploy(scope = RemoteScope(address))))
-
   def deploy = Deploy(scope = RemoteScope(address))
+
+  def actorOf(context: ActorRefFactory, props: Props) = context.actorOf(props.withDeploy(deploy))
 
   def shutdownRemote() { shutdownActor ! PoisonPill }
   def killRemote() { info.kill() }

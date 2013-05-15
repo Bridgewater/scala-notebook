@@ -29,6 +29,8 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
   
   val executionCounter = new AtomicInteger(0)
 
+  val kernelIdToCalcService = collection.mutable.Map[String, CalcWebSocketService]()
+
   // RH: I have no idea why this isn't part of unfiltered or something... unless it is and my Google-fu failed me.
   object Encoded {
     def unapply(raw: String) = try {
@@ -43,15 +45,15 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
     val intent: unfiltered.netty.websockets.Intent = {
       case req@Path(Seg("kernels" :: kernelId :: channel :: Nil)) => {
         case Open(websock) =>
-          for (kernel <- KernelManager.get(kernelId)) {
+          for (calcService <- kernelIdToCalcService.get(kernelId)) {
             logInfo("Opening Socket " + channel + " for " + kernelId + " to " + websock)
             if (channel == "iopub")
-              kernel.ioPubPromise.success(new WebSockWrapperImpl(websock))
+              calcService.ioPubPromise.success(new WebSockWrapperImpl(websock))
             else if (channel == "shell")
-              kernel.shellPromise.success(new WebSockWrapperImpl(websock))
+              calcService.shellPromise.success(new WebSockWrapperImpl(websock))
           }
         case Message(socket, Text(msg)) =>
-          for (kernel <- KernelManager.get(kernelId)) {
+          for (calcService <- kernelIdToCalcService.get(kernelId)) {
 
             logDebug("Message for " + kernelId + ":" + msg)
 
@@ -67,7 +69,7 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
                 case JString("execute_request") => {
                   for (JField("code", JString(code)) <- content) {
                     val execCounter = executionCounter.incrementAndGet()
-                    kernel.router ! SessionRequest(header, session, ExecuteRequest(execCounter, code))
+                    calcService.calcActor ! SessionRequest(header, session, ExecuteRequest(execCounter, code))
                   }
                 }
 
@@ -76,13 +78,13 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
                     JField("line", JString(line)) <- content;
                     JField("cursor_pos", JInt(cursorPos)) <- content
                   ) {
-                    kernel.router ! SessionRequest(header, session, CompletionRequest(line, cursorPos.toInt))
+                    calcService.calcActor ! SessionRequest(header, session, CompletionRequest(line, cursorPos.toInt))
                   }
                 }
 
                 case JString("object_info_request") => {
                   for (JField("oname", JString(oname)) <- content) {
-                    kernel.router ! SessionRequest(header, session, ObjectInfoRequest(oname))
+                    calcService.calcActor ! SessionRequest(header, session, ObjectInfoRequest(oname))
                   }
                 }
 
@@ -202,7 +204,10 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
     def startKernel(kernelId: String) = {
       val compilerArgs = config.kernelCompilerArgs
       val initScripts = config.kernelInitScripts
-      KernelManager.add(kernelId, new Kernel(system,initScripts, compilerArgs ))
+      val kernel = new Kernel(system)
+      KernelManager.add(kernelId, kernel)
+      val service = new CalcWebSocketService(system, initScripts, compilerArgs, kernel.remoteDeployFuture)
+      kernelIdToCalcService += kernelId -> service
       val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s:%d".format(domain, port))
       JsonContent ~> ResponseString(compact(render(json))) ~> Ok
     }
@@ -223,8 +228,8 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
 
       case req@POST(Path(Seg("kernels" :: kernelId :: "interrupt" :: Nil))) =>
         logInfo("Interrupting kernel " + kernelId)
-        for (kernel <- KernelManager.get(kernelId)) {
-          kernel.router ! InterruptCalculator
+        for (calcService <- kernelIdToCalcService.get(kernelId)) {
+          calcService.calcActor ! InterruptCalculator
         }
         req.respond(PlainTextContent ~> Ok)
     }
@@ -327,7 +332,6 @@ trait NotebookSession extends Logging {
   val nbm = new NotebookManager(config.projectName, config.notebooksDir)
   val system = ActorSystem("NotebookServer", AkkaConfigUtils.optSecureCookie(ConfigFactory.load("notebook-server"), akka.util.Crypt.generateSecureCookie))
   logInfo("Notebook session initialized")
-  val vmManager = system.actorOf(Props(new VMManager(new Subprocess(config.kernelVMConfig))))
 
   ifDebugEnabled {
     system.eventStream.subscribe(system.actorOf(Props(new Actor {

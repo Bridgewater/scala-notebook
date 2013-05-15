@@ -5,9 +5,9 @@ import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.bwater.notebook.client.ExecuteRequest
 import com.bwater.notebook.client.{ExecuteResponse, ExecuteRequest}
+import com.bwater.notebook.Kernel
 import com.bwater.notebook.kernel.remote.AkkaConfigUtils
-import com.bwater.notebook.server.SessionRequest
-import com.bwater.notebook.server.{SessionRequest, Kernel, WebSockWrapper}
+import com.bwater.notebook.server.{CalcWebSocketService, SessionRequest, WebSockWrapper}
 import com.typesafe.config.ConfigFactory
 import java.util.concurrent.{LinkedBlockingQueue, ArrayBlockingQueue, BlockingQueue}
 import net.liftweb.json.JsonAST.JInt
@@ -39,10 +39,11 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
   class CalcTester {
     val io = new TestWebSocket("io")
     val shell = new TestWebSocket("shell")
-    val kernel = new Kernel(_system, List(), List())
+    val kernel = new Kernel(_system)
     startedKernels = kernel :: startedKernels
-    kernel.ioPubPromise.success(io)
-    kernel.shellPromise.success(shell)
+    val service = new CalcWebSocketService(system, List(), List(), kernel.remoteDeployFuture)
+    service.ioPubPromise.success(io)
+    service.shellPromise.success(shell)
 
     def sendCode(code:String) {
       kernel.router ! SessionRequest(JInt(1), JInt(1), ExecuteRequest(1, code))
