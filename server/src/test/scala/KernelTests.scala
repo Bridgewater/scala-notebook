@@ -46,7 +46,7 @@ class KernelTests(_system: ActorSystem) extends TestKit(_system) with ImplicitSe
     service.shellPromise.success(shell)
 
     def sendCode(code:String) {
-      kernel.router ! SessionRequest(JInt(1), JInt(1), ExecuteRequest(1, code))
+      service.calcActor ! SessionRequest(JInt(1), JInt(1), ExecuteRequest(1, code))
     }
   }
 
