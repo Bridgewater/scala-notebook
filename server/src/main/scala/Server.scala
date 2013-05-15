@@ -27,23 +27,21 @@ object Server extends Logging {
 
 
   def openBrowser(url: String) {
-    println("Launching browswer on %s".format(url))
+    println("Launching browser on %s".format(url))
     unfiltered.util.Browser.open(url) match {
       case Some(ex) => println("Cannot open browser to %s\n%s".format(url, ex.toString))
       case None =>
     }
   }
-  
+
   def main(args: Array[String]) {
     startServer(args, ScalaNotebookConfig.withOverrides(ScalaNotebookConfig.defaults))(openBrowser)
   }
 
-  private val preferredPort = 8899
-
   // This is basically unfiltered.util.Port.any with a preferred port, and is host-aware. Like the original, this
   // approach can be really unlucky and have someone else steal our port between opening this socket and when unfiltered
   // opens it again, but oh well...
-  private def choosePort(host: String) = {
+  private def choosePort(host: String, preferredPort:Int) = {
     val addr = InetAddress.getByName(host)
 
     // 50 for the queue size is java's magic number, not mine. The more common ServerSocket constructor just
@@ -64,17 +62,37 @@ object Server extends Logging {
     PropertyConfigurator.configure(getClass.getResource("/log4j.server.properties"))
     logDebug("Classpath: " + System.getProperty("java.class.path"))
 
-    val secure = !args.contains("--disable_security")
+    val argslist = args.mkString(" ").replaceAll("=", " ").split(" ").toList
+    type OptionMap = Map[String, Any]
+
+    def nextOption(map : OptionMap, list: List[String]) : OptionMap = {
+      list match {
+        case Nil => map
+        case "--disable_security" :: tail =>
+                               nextOption(map ++ Map("disable_security" -> true), tail)
+        case "--host" :: value :: tail =>
+                               nextOption(map ++ Map("host" -> value), tail)
+        case "--port" :: value :: tail =>
+                               nextOption(map ++ Map("port" -> value.toInt), tail)
+        case "--notebook" :: value :: tail =>
+                               nextOption(map ++ Map("notebook" -> value), tail)
+        case other        :: tail => println("Unknown commandline option "+ other)
+                               nextOption(map, tail)
+      }
+    }
+    val defaults = Map("disable_security" -> false,
+                       "host" -> "127.0.0.1",
+                       "port" -> 8899)
+
+    val options = nextOption(defaults, argslist)
+    val secure = !options("disable_security").toString.toBoolean
+    val host = options("host").toString
+    val port = choosePort(host, options("port").asInstanceOf[Int])
+    val notebook = options.getOrElse("notebook", "").toString
 
     logInfo("Running SN Server in " + config.notebooksDir.getAbsolutePath)
-    val host = "127.0.0.1"
-    val port = choosePort(host)
     val security = if (secure) new ClientAuth(host, port) else Insecure
 
-    val NotebookArg = "--notebook=(\\S+)".r
-    val notebook = args.collect {
-      case NotebookArg(name) => name
-    }.headOption
     val queryString =
       for (name <- notebook)
       yield "?dest=" + URLEncoder.encode("/view/" + name, "UTF-8")
