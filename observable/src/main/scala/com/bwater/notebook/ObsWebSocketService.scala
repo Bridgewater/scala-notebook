@@ -19,7 +19,7 @@ class ObsWebSocketService(system: ActorSystem, val webSock: WebSocket, remoteDep
 
     override def preStart() {
       val remoteDeploy = Await.result(remoteDeployFuture, 2 minutes)
-      remote = context.actorOf(Props(new RemoteActor).withDeploy(remoteDeploy))
+      remote = context.actorOf(Props[ObsServiceRemoteActor].withDeploy(remoteDeploy))
     }
 
     def receive = {
@@ -31,14 +31,17 @@ class ObsWebSocketService(system: ActorSystem, val webSock: WebSocket, remoteDep
     }
   }
 
-  class RemoteActor extends Actor with ActorLogging   {
-    override def preStart() {
-      JSBusState.setPublisher((id, value) => self ! ObservableVMToBrowser(id, value))
-    }
+}
 
-    def receive = {
-      case ObservableBrowserToVM(id, newValue) => JSBus.forwardClientUpdateMessage(id, newValue)
-      case msg: ObservableVMToBrowser => context.parent ! msg
-    }
+
+
+class ObsServiceRemoteActor extends Actor with ActorLogging   {
+  override def preStart() {
+    JSBusState.setPublisher((id, value) => self ! ObservableVMToBrowser(id, value))
+  }
+
+  def receive = {
+    case ObservableBrowserToVM(id, newValue) => JSBus.forwardClientUpdateMessage(id, newValue)
+    case msg: ObservableVMToBrowser => context.parent ! msg
   }
 }

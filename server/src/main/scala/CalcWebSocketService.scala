@@ -27,7 +27,7 @@ class CalcWebSocketService(system: ActorSystem, initScripts: List[String], compi
   val ioPubPromise = Promise[WebSockWrapper]
   val shellPromise = Promise[WebSockWrapper]
 
-  val calcActor = system.actorOf(Props[CalcActor])
+  val calcActor = system.actorOf(Props( new CalcActor))
 
   class CalcActor extends Actor with ActorLogging {
     private var currentSessionOperation: Option[ActorRef] = None
