@@ -8,7 +8,7 @@ import com.bwater.notebook.util.Logging
 import org.apache.log4j.PropertyConfigurator
 import server._
 import java.io.{ IOException, File, Reader }
-import java.net.InetAddress
+import java.net.{ InetAddress, URLEncoder }
 import com.typesafe.config.Config
 import java.io.BufferedReader
 import com.typesafe.config.ConfigFactory
@@ -25,9 +25,17 @@ object Server extends Logging {
 
   FileUtils.forceMkdir(new File("logs"))
 
+
+  def openBrowser(url: String) {
+    println("Launching browswer on %s".format(url))
+    unfiltered.util.Browser.open(url) match {
+      case Some(ex) => println("Cannot open browser to %s\n%s".format(url, ex.toString))
+      case None =>
+    }
+  }
   
   def main(args: Array[String]) {
-    startServer(args, ScalaNotebookConfig.withOverrides(ScalaNotebookConfig.defaults))(unfiltered.util.Browser.open)
+    startServer(args, ScalaNotebookConfig.withOverrides(ScalaNotebookConfig.defaults))(openBrowser)
   }
 
   private val preferredPort = 8899
@@ -63,12 +71,17 @@ object Server extends Logging {
     val port = choosePort(host)
     val security = if (secure) new ClientAuth(host, port) else Insecure
 
+    val NotebookArg = "--notebook=(\\S+)".r
+    val notebook = args.collect {
+      case NotebookArg(name) => name
+    }.headOption
+    val queryString =
+      for (name <- notebook)
+      yield "?dest=" + URLEncoder.encode("/view/" + name, "UTF-8")
+
     startServer(config, host, port, security) {
-      (http, app) => {
-        val url = "http://%s:%d/%s".format(host, port, security.loginPath)
-        println("Launching server at %s".format(url))
-        startAction(url)
-      }
+      val baseUrl = "http://%s:%d/%s".format(host, port, security.loginPath)
+      (http, app) => startAction((baseUrl ++ queryString).mkString)
     }
   }
 
