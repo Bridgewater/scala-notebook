@@ -1,4 +1,4 @@
-package com.bwater.notebook
+package notebook
 package server
 
 import java.net.URLEncoder
@@ -15,8 +15,9 @@ object LayoutTools {
   val base_kernel_url = "/"
   val base_observable_url = "observable" // TODO: Ugh...
   val read_only = false
-  val mathjax_url = "" // http://cdn.mathjax.org/mathjax/latest/MathJax.js"
+//  val mathjax_url = "" // http://cdn.mathjax.org/mathjax/latest/MathJax.js"
+  val mathjax_url = "http://cdn.mathjax.org/mathjax/latest/MathJax.js"
 
   def encode(text: String) = URLEncoder.encode(text, "UTF-8")
-  
+
 }

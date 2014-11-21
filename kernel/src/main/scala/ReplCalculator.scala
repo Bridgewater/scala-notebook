@@ -1,9 +1,15 @@
-package com.bwater.notebook
+package notebook
 package client
 
 import akka.actor.{ActorLogging, Props, Actor}
 import kernel._
 import java.io.File
+
+import notebook.util.Match
+import notebook.front._
+import notebook.front.widgets._
+
+import org.apache.spark.repl.HackSparkILoop
 
 /**
  * Author: Ken
@@ -46,13 +52,48 @@ case class ObjectInfoResponse(found: Boolean, name: String, callDef: String, cal
  * @param compilerArgs Command line arguments to pass to the REPL compiler
  */
 class ReplCalculator(initScripts: List[String], compilerArgs: List[String]) extends Actor with akka.actor.ActorLogging {
-  private lazy val repl = new Repl(compilerArgs)
+  private var _repl:Option[Repl] = None
+
+  private def repl:Repl = _repl getOrElse {
+    val r = new Repl(compilerArgs, Nil)
+    _repl = Some(r)
+    r
+  }
+
+  private val cpRegex = "(?s)^:cp\\s*(.+)\\s*$".r
+  private val sqlRegex = "(?s)^:sql(?:\\[([a-zA-Z0-9][a-zA-Z0-9]*)\\])?\\s*(.+)\\s*$".r
+
 
   // Make a child actor so we don't block the execution on the main thread, so that interruption can work
   private val executor = context.actorOf(Props(new Actor {
     def receive = {
       case ExecuteRequest(_, code) =>
-        val (result, _) = repl.evaluate(code, msg => sender ! StreamResponse(msg, "stdout"))
+        val (result, _) = {
+          val newCode =
+            code match {
+              case cpRegex(cp) =>
+                val jars = cp.trim().split("\n").toList.map(_.trim()).filter(_.size > 0)
+                val (_r, replay) = repl.addCp(jars)
+                _repl = Some(_r)
+                preStartLogic()
+                replay()
+                s""" "Classpath changed!" """
+
+              case sqlRegex(n, sql) =>
+                log.debug(s"Received sql code: [$n] $sql")
+                val qs = "\"\"\""
+                //if (!sqlGen.parts.isEmpty) {
+                  val name = Option(n).map(nm => s"val $nm = ").getOrElse ("")
+                  val c = s"""
+                    import notebook.front.widgets.Sql
+                    import notebook.front.widgets.Sql._
+                    ${name}new Sql(sqlContext, s${qs}${sql}${qs})
+                  """
+                  c
+              case _ => code
+            }
+          repl.evaluate(newCode, msg => sender ! StreamResponse(msg, "stdout"))
+        }
 
         result match {
           case Success(result)     => sender ! ExecuteResponse(result.toString)
@@ -62,18 +103,38 @@ class ReplCalculator(initScripts: List[String], compilerArgs: List[String]) exte
     }
   }))
 
-  override def preStart() {
+  def preStartLogic() {
     log.info("ReplCalculator preStart")
-    for (script <- initScripts if (script.trim.length > 0)) {
-      val (result, _) = repl.evaluate(script)
-      result match {
-        case Failure(str) =>
-          log.error("Error in init script: \n%s".format(str))
-        case _ =>
-          if (log.isDebugEnabled) log.debug("\n" + script)
-          log.info("Init script processed successfully")
-      }
+
+    val dummyScript = () => s"""val dummy = ();\n"""
+    val SparkHookScript = () => s"""val _5C4L4_N0T3800K_5P4RK_HOOK = "${repl.classServerUri.get}";\n"""
+
+    def eval(script: () => String):Unit = {
+      val sc = script()
+      if (sc.trim.length > 0) {
+        val (result, _) = repl.evaluate(sc)
+        result match {
+          case Failure(str) =>
+            log.error("Error in init script: \n%s".format(str))
+          case _ =>
+            if (log.isDebugEnabled) log.debug("\n" + sc)
+            log.info("Init script processed successfully")
+        }
+      } else ()
     }
+
+    for (script <- (dummyScript :: SparkHookScript :: initScripts.map(x => () => x)) ) {
+
+      println(" INIT SCRIPT ")
+      println(script)
+
+
+      eval(script)
+    }
+  }
+
+  override def preStart() {
+    preStartLogic()
     super.preStart()
   }
 

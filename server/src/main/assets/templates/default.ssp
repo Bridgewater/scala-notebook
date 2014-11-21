@@ -6,7 +6,7 @@
 <%@ var header: String = "" %>
 <%@ var site: String = "" %>
 <%@ var script: String = "" %>
-<% import com.bwater.notebook.server.LayoutTools._  %>
+<% import notebook.server.LayoutTools._  %>
 
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -16,6 +16,9 @@
 
     <title>${title}</title>
 
+    <!--hack to avoid bokeh.css integration side effect-->
+    <link rel="stylesheet" href="${static_url("css/bokeh.css")}" type="text/css" />
+
     <link rel="stylesheet" href="${static_url("jquery/css/base/jquery-ui.min.css")}" type="text/css" />
     <link rel="stylesheet" href="${static_url("css/boilerplate.css")}" type="text/css" />
     <link rel="stylesheet" href="${static_url("css/fbm.css")}" type="text/css" media="screen"/>
@@ -23,24 +26,27 @@
     ${unescape(stylesheet)}
 
     ${unescape(meta)}
-    
+
 </head>
 
 <body ${unescape(params)}>
 
     <div id="header">
        <div>
-        <span id="login_widget"></span>
+        <span id="login_widget">
+            <button id="login"></button>
+            <button id="logout"></button>
+        </span>
 
         ${unescape(header)}
-   
+
        <div id="logo">
        <!-- TODO: External logo hook -->
         </div>
         </div>
-        
+
     </div>
-    <div id="expand_header"><a href="#"><i class="icon-chevron-down"></i></a></div>
+    <div id="expand_header"><a href="#"><i class="glyphicon glyphicon-chevron-down"></i></a></div>
 
     <div id="site">
         ${unescape(site)}
@@ -48,7 +54,14 @@
 
     <script src="${static_url("curl/curl.js")}" type="text/javascript" charset="utf-8"></script>
     <script src="${static_url("jquery/js/jquery.js")}" type="text/javascript" charset="utf-8"></script>
+    <script>
+      //heack for jquery-ui to not use require (jquery not yet loaded via curljs :-/)
+      define.amd = false;
+    </script>
     <script src="${static_url("jquery/js/jquery-ui.js")}" type="text/javascript" charset="utf-8"></script>
+    <script>
+      define.amd = true;
+    </script>
     <script src="${static_url("js/namespace.js")}" type="text/javascript" charset="utf-8"></script>
     <script src="${static_url("js/csrf.js")}" type="text/javascript" charset="utf-8"></script>
     <script src="${static_url("js/page.js")}" type="text/javascript" charset="utf-8"></script>
