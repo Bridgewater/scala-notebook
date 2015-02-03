@@ -213,9 +213,9 @@ return new function () {
             var source = this.textContent;
             $(this).remove();
 
-            function require(requirements, callback) {
+            data.require = function (requirements, callback) {
               curl(requirements, function () { callback.apply(scope, arguments); });
-            }
+            };
 
             return function () { (function() { with (data) { eval(source); } }).call(scope); };
         });
