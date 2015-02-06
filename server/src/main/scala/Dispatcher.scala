@@ -14,7 +14,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import com.typesafe.config.ConfigFactory
 import client._
-import kernel.remote.{Subprocess, AkkaConfigUtils, VMManager}
+import kernel.remote.AkkaConfigUtils
 import com.bwater.notebook.util.Logging
 import unfiltered.netty.RequestBinding
 import unfiltered.response._
