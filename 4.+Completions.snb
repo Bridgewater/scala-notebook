@@ -1,0 +1,68 @@
+{
+  "metadata":{
+    "name":"4. Completions",
+    "user_save_timestamp":"2015-02-04T23:57:54.243Z",
+    "auto_save_timestamp":"2015-02-06T03:30:45.958Z"
+  },
+  "worksheets":[{
+    "cells":[{
+      "cell_type":"markdown",
+      "source":"## Completions\n\nScala Notebook supports help auto-complete options to make writing code less painful."
+    },{
+      "cell_type":"code",
+      "input":"// Put caret at the end of the line and hit Tab.  Should auto-complete to \"notebook\".  Add a period and\n// hit tab again. A dropdown of possible completions will appeaar.\ncom.bwater.note",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"// Type a left paren and wait.  Method signature information will appear.\nsys.error",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"// Type a left paren and wait.  Method overloads will appear as well.\nConsole.println",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"// SN can also complete String literals.\n// Hit tab -- a list of files and directory starting with the letter s in the current \n// working directory will appear.\nnew File(\"s",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    }]
+  }],
+  "autosaved":[{
+    "cells":[{
+      "cell_type":"markdown",
+      "source":"## Completions\n\nScala Notebook supports help auto-complete options to make writing code less painful."
+    },{
+      "cell_type":"code",
+      "input":"// Put caret at the end of the line and hit Tab.  Should auto-complete to \"notebook\".  Add a period and\n// hit tab again. A dropdown of possible completions will appeaar.\ncom.bwater.notebook.",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"// Type a left paren and wait.  Method signature information will appear.\nsys.error(",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"// Type a left paren and wait.  Method overloads will appear as well.\nConsole.println(",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"// SN can also complete String literals.\n// Hit tab -- a list of files and directory starting with the letter s in the current \n// working directory will appear.\nnew File(\"s",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    }]
+  }],
+  "nbformat":3
+}

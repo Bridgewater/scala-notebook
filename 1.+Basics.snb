@@ -1,8 +1,8 @@
 {
   "metadata":{
-    "name":"Welcome",
-    "user_save_timestamp":"2013-03-13T21:55:13.342Z",
-    "auto_save_timestamp":"2013-03-13T21:54:57.794Z"
+    "name":"1. Basics",
+    "user_save_timestamp":"2015-02-05T18:24:57.792Z",
+    "auto_save_timestamp":"2015-02-05T18:24:45.938Z"
   },
   "worksheets":[{
     "cells":[{
@@ -13,52 +13,66 @@
       "source":"To edit a markdown cell, double-click in the text. "
     },{
       "cell_type":"code",
-      "input":"// Simple expressions\nList(1,2,3).reverse\n ",
+      "input":"// Simple expressions\nList(1,2,3,4).reverse\n",
       "language":"scala",
       "collapsed":false,
-      "prompt_number":2,
+      "prompt_number":7,
       "outputs":[]
     },{
       "cell_type":"code",
-      "input":"// Functions\ndef fact(n: Int):Int = if (n == 0) 1 else n*fact(n-1)",
+      "input":"// Functions\ndef fact(n: Int): Int = if (n == 0) 1 else n*fact(n-1)",
       "language":"scala",
       "collapsed":false,
-      "prompt_number":5,
+      "prompt_number":8,
       "outputs":[]
     },{
       "cell_type":"code",
       "input":"// Functions are callable after they are defined. By convention, notebooks evaluate from top to bottom\n// but you must evaluate a cell before it is used\nfact(10)",
       "language":"scala",
       "collapsed":false,
-      "prompt_number":6,
+      "prompt_number":9,
       "outputs":[]
     },{
       "cell_type":"code",
-      "input":"// HTML return types are also suppored\n<table>{ for (row <- 1 to 5) yield \n  <tr>{ for (col <- 1 to 4) yield <td>{row*col}</td> }</tr>\n} </table>",
+      "input":"notarealexpression * 2",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":10,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"sys.error(\"explode!\")",
       "language":"scala",
       "collapsed":false,
       "prompt_number":11,
       "outputs":[]
     },{
       "cell_type":"code",
-      "input":"// Reactive components allow dynamic communication to Scala and Javascript\nval ib = new InputBox(\"\")",
+      "input":"// HTML return types are also suppored\n<table>{ for (row <- 1 to 5) yield \n  <tr>{ for (col <- 1 to 4) yield <td>{row*col}</td> }</tr>\n} </table>",
       "language":"scala",
       "collapsed":false,
-      "prompt_number":1,
+      "prompt_number":12,
       "outputs":[]
     },{
       "cell_type":"code",
-      "input":"val ib2 = new InputBox(\"\")",
+      "input":"<img src=\"http://i.imgur.com/EQ1uJ8i.gif\" />",
       "language":"scala",
       "collapsed":false,
-      "prompt_number":2,
+      "prompt_number":13,
       "outputs":[]
     },{
       "cell_type":"code",
-      "input":"// After running this, type text in the second box and it appears in the first\nib.currentValue <-- ib2.currentValue",
+      "input":"// stdout streams in real-time\nfor (i <- 1 to 10) yield {\n  Thread.sleep(500)\n  println(i)\n  i\n}\n",
       "language":"scala",
       "collapsed":false,
-      "prompt_number":5,
+      "prompt_number":14,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"// widgets is available because of imports in init.sc\nwidgets.text(\"Hello, World!\")",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":15,
       "outputs":[]
     },{
       "cell_type":"code",
