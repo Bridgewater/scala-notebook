@@ -1,0 +1,70 @@
+{
+  "metadata":{
+    "name":"2. Interactivity",
+    "user_save_timestamp":"2015-02-05T19:18:41.786Z",
+    "auto_save_timestamp":"2015-02-05T19:18:05.343Z"
+  },
+  "worksheets":[{
+    "cells":[{
+      "cell_type":"markdown",
+      "source":"## Interactive widgets\n\nHow do these widgets work exactly...?\n"
+    },{
+      "cell_type":"code",
+      "input":"// Reactive components allow dynamic communication to Scala and Javascript\nval ib = new InputBox(\"\")",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":17,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"// after running this line, values typed in ib2 will get mirrored in ib\nib.currentValue.observer <-- Observable.timer(\n  scala.util.Random.alphanumeric.map(_.toString).take(10), 5)",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":13,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"val ib2 = new InputBox(\"\")",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":18,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"ib.currentValue <-- ib2.currentValue",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":15,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"// More advanced.  You should read \"observer\" as \"sink\" and \"observable\" as \"source\"\nib.currentValue.observer <-- ib2.currentValue.observable.map(_.toUpperCase)",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":19,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"val dropdown = new DropDown(Seq(\"a\", \"b\", \"c\"))",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":20,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"dropdown.optionsConnection.observer <-- ib2.currentValue.observable.map(_.split(\",\").toSeq)",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":21,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    }]
+  }],
+  "autosaved":[],
+  "nbformat":3
+}

@@ -12,6 +12,9 @@ package com.bwater.notebook
  */
 trait Observer[T] extends rx.Observer[T] {
   def map[A](fxn: A=>T): Observer[A] =  new MappingObserver[T,A]{ def innerObserver = Observer.this; def observerMapper = fxn }
+  def <--(other: Observable[T]): Unit = {
+    other.subscribe(this)
+  }
 }
 
 /**

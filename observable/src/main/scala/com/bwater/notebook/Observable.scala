@@ -42,4 +42,11 @@ trait MappingObservable[A,B] extends Observable[B] {
 
 object Observable {
   def just[T](x: T): Observable[T] = new WrappedObservable[T](rx.Observable.just(x))
+
+  def timer[T](x: Stream[T], delay: Int) = new WrappedObservable[T](rx.Observable.toObservable(new java.lang.Iterable[T] {
+    def iterator = {
+      import collection.JavaConversions._
+      x.map(x => { Thread.sleep(delay * 100); x }).toIterator
+    }
+  }))
 }

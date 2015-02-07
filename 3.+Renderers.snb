@@ -1,0 +1,132 @@
+{
+  "metadata":{
+    "name":"3. Renderers",
+    "user_save_timestamp":"2015-02-05T20:55:02.356Z",
+    "auto_save_timestamp":"2015-02-07T17:14:53.373Z"
+  },
+  "worksheets":[{
+    "cells":[{
+      "cell_type":"markdown",
+      "source":"## Renderers\n\nScala Notebook renders outputs automatically..."
+    },{
+      "cell_type":"code",
+      "input":"(1 to 100)",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":9,
+      "outputs":[]
+    },{
+      "cell_type":"markdown",
+      "source":"But sometimes more granular control is required.  In cases like this, one can use a custom Renderer to define a a custom visualization, in a type safe way."
+    },{
+      "cell_type":"code",
+      "input":"// First define an implicit renderer bullshit\nimplicit object overrideSeqRenderer extends Renderer[Seq[Int]] {\n  def render(x: Seq[Int]) = widgets.text(x.take(25).mkString(\",\"))\n}",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":16,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"(1 to 100)",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":17,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"implicit object productRenderer extends Renderer[Product] {\n  def render(x: Product) = widgets.row(\n    (for { value <- x.productIterator.toSeq } yield widgets.text(value.toString)):_*\n  )\n}",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":12,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"case class Foo(a: Int, b: String)\nFoo(12, \"bjkdlf\")\n",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":13,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"implicit object productRenderer extends Renderer[Seq[Product]] {\n  def render(x: Seq[Product]) = {\n    if (x.isEmpty) {\n      widgets.text(\"[Empty seq]\")\n    } else {\n      val proto = x.head\n      val values = x.flatMap(_.productIterator)\n      widgets.layout(proto.productArity, \n        values.map(v => widgets.text(v.toString))\n      )\n    }\n  }\n}",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":14,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"Seq(\n  Foo(1, \"b\"), \n  Foo(2, \"c\"), \n  Foo(3, \"d\")\n)",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":15,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    }]
+  }],
+  "autosaved":[{
+    "cells":[{
+      "cell_type":"markdown",
+      "source":"## Renderers\n\nScala Notebook renders outputs automatically..."
+    },{
+      "cell_type":"code",
+      "input":"(1 to 100)",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":17,
+      "outputs":[]
+    },{
+      "cell_type":"markdown",
+      "source":"But sometimes more granular control is required.  In cases like this, one can use a custom Renderer to define a a custom visualization, in a type safe way."
+    },{
+      "cell_type":"code",
+      "input":"// First define an implicit renderer\nimplicit object overrideSeqRenderer extends Renderer[Seq[Int]] {\n  def render(x: Seq[Int]) = widgets.text(x.take(25).mkString(\",\"))\n}",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":18,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"(1 to 100)",
+      "language":"scala",
+      "collapsed":false,
+      "prompt_number":19,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"implicit object productRenderer extends Renderer[Product] {\n  def render(x: Product) = widgets.row(\n    (for { value <- x.productIterator.toSeq } yield widgets.text(value.toString)):_*\n  )\n}",
+      "language":"scala",
+      "collapsed":false,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"case class Foo(a: Int, b: String)\nFoo(12, \"bjkdlf\")\n",
+      "language":"scala",
+      "collapsed":false,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"implicit object productRenderer extends Renderer[Seq[Product]] {\n  def render(x: Seq[Product]) = {\n    if (x.isEmpty) {\n      widgets.text(\"[Empty seq]\")\n    } else {\n      val proto = x.head\n      val values = x.flatMap(_.productIterator)\n      widgets.layout(proto.productArity, \n        values.map(v => widgets.text(v.toString))\n      )\n    }\n  }\n}",
+      "language":"scala",
+      "collapsed":false,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"Seq(\n  Foo(1, \"b\"), \n  Foo(2, \"c\"), \n  Foo(3, \"d\")\n)",
+      "language":"scala",
+      "collapsed":false,
+      "outputs":[]
+    },{
+      "cell_type":"code",
+      "input":"",
+      "language":"scala",
+      "collapsed":true,
+      "outputs":[]
+    }]
+  }],
+  "nbformat":3
+}
