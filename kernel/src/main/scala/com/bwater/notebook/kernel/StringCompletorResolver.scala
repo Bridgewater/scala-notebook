@@ -12,7 +12,7 @@ import com.bwater.notebook.StringCompletor
 
 object StringCompletorResolver {
   lazy val completor = {
-    val className = "com.bwater.notebook.kernel.TestStringCompletor"
+    val className = "com.bwater.notebook.kernel.completor.FileCompletor"
     //ClassUtil.instantiateClass(className).asInstanceOf[StringCompletor]
       Class.forName(className).getConstructor().newInstance().asInstanceOf[StringCompletor]
   }
