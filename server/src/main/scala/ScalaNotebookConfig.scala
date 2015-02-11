@@ -8,7 +8,6 @@ import com.bwater.notebook.kernel.ConfigUtils._
 import com.bwater.notebook.Server
 import org.apache.commons.io.FileUtils
 import java.net.URL
-import com.bwater.notebook.kernel.pfork.ProcessFork
 import com.bwater.notebook.Server
 import scala.collection.mutable.MapBuilder
 import util.control.Exception.allCatch
