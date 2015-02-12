@@ -7,6 +7,8 @@
 import org.apache.ivy.core.module.id.ModuleRevisionId
 import sbt._
 import Keys._
+import sbtassembly.Plugin._
+import AssemblyKeys._
 import org.apache.ivy.core.install.InstallOptions
 import com.untyped.sbtjs.Plugin._
 import scala.Some
@@ -108,12 +110,13 @@ object NotebookBuild extends Build {
       ),
 
       libraryDependencies ++= Seq(
-        "org.scala-lang" % "jline" % scalaVersion.value,
+        ("org.scala-lang" % "jline" % scalaVersion.value)
+          .exclude("org.fusesource.jansi", "jansi"), // work-around to https://issues.scala-lang.org/browse/SI-8201 as suggested in https://github.com/sbt/sbt-assembly/issues/92#issuecomment-29890092
         "org.scala-lang" % "scala-compiler" % scalaVersion.value
       )
     )
 
-  lazy val server = Project(id = "server", base = file("server"))
+  lazy val server = Project(id = "server", base = file("server"), settings = settings ++ assemblySettings)
     .dependsOn(common, kernel)
     .projectDefaults
     .withWebAssets

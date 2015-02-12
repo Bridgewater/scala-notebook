@@ -26,6 +26,7 @@ run
 
 ![Alt text](http://i.imgur.com/8wnrP34.png)
 
+
 Development
 -----------
 
@@ -53,3 +54,13 @@ To that end, the project is organized as follows:
 * Server
 * Kernel(s)
 * Widgets
+
+
+Deployment
+----------
+
+To produce a deployable artifact:
+
+```
+$ sbt "project server" "assembly"
+```
