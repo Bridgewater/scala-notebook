@@ -137,7 +137,7 @@ object Server extends Logging {
     val moduleRes = config.serverResources map (res => Resources(userResourceURL(res), 3600, true))
     val observableRes = Resources(getClass.getResource("/observable/"), 3600, false)
 
-    val http = unfiltered.netty.Http(port, host)
+    val http = unfiltered.netty.Http(port)
 
     class Pipe[A](value: A) {
       def pipe[B](f: A => B): B = f(value)
