@@ -25,8 +25,7 @@ object Server extends Logging {
 
   FileUtils.forceMkdir(new File("logs"))
 
-
-  def openBrowser(url: String) {
+  private def openBrowser(url: String) {
     println("Launching browser on %s".format(url))
     unfiltered.util.Browser.open(url) match {
       case Some(ex) => println("Cannot open browser to %s\n%s".format(url, ex.toString))
@@ -34,8 +33,10 @@ object Server extends Logging {
     }
   }
 
+  private def nullStartAction(url: String): Unit = ()
+
   def main(args: Array[String]) {
-    startServer(args, ScalaNotebookConfig.withOverrides(ScalaNotebookConfig.defaults))(openBrowser)
+    startServer(args, ScalaNotebookConfig.withOverrides(ScalaNotebookConfig.defaults))
   }
 
   // This is basically unfiltered.util.Port.any with a preferred port, and is host-aware. Like the original, this
@@ -58,7 +59,7 @@ object Server extends Logging {
   }
 
 
-  def startServer(args: Array[String], config: ScalaNotebookConfig)(startAction: (String) => Unit) {
+  def startServer(args: Array[String], config: ScalaNotebookConfig) {
     PropertyConfigurator.configure(getClass.getResource("/log4j.server.properties"))
     logDebug("Classpath: " + System.getProperty("java.class.path"))
 
@@ -76,13 +77,16 @@ object Server extends Logging {
                                nextOption(map ++ Map("port" -> value.toInt), tail)
         case "--notebook" :: value :: tail =>
                                nextOption(map ++ Map("notebook" -> value), tail)
+        case "--start_action" :: value :: tail =>
+                               nextOption(map ++ Map("start_action" -> value), tail)
         case other        :: tail => println("Unknown commandline option "+ other)
                                nextOption(map, tail)
       }
     }
     val defaults = Map("disable_security" -> false,
                        "host" -> "127.0.0.1",
-                       "port" -> 8899)
+                       "port" -> 8899,
+                       "start_action" -> "open_browser")
 
     val options = nextOption(defaults, argslist)
     val secure = !options("disable_security").toString.toBoolean
@@ -96,6 +100,15 @@ object Server extends Logging {
     val queryString =
       for (name <- notebook)
       yield "?dest=" + URLEncoder.encode("/view/" + name, "UTF-8")
+
+    val startActionOption = options("start_action")
+    val startAction: (String) => Unit = startActionOption match {
+      case "open_browser" => openBrowser
+      case "none" => nullStartAction
+      case _ =>
+        println(s"Unknown start action: '$startActionOption'.")
+        nullStartAction
+    }
 
     startServer(config, host, port, security) {
       val baseUrl = "http://%s:%d/%s".format(host, port, security.loginPath)
