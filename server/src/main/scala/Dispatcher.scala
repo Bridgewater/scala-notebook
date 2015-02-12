@@ -169,11 +169,12 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
 
       case req@GET(Path(Seg("view" :: Encoded(name) :: Nil))) =>
         val id = req.parameterValues("id").headOption
+        val host = req.headers("Host").toList.head
         view(req, "notebook.ssp",
           "notebook_id" -> (id getOrElse nbm.notebookId(name)),
           "notebook_name" -> name,
           "project" -> nbm.name,
-          "ws_url" ->  "ws:/%s:%d".format(domain, port))
+          "ws_url" ->  "ws:/%s".format(host))
 
 
       case req@Path(Seg("print" :: Encoded(name) :: Nil)) =>
@@ -201,28 +202,30 @@ class Dispatcher(protected val config: ScalaNotebookConfig,
     }
 
 
-    def startKernel(kernelId: String) = {
+    def startKernel(host: String, kernelId: String) = {
       val compilerArgs = config.kernelCompilerArgs
       val initScripts = config.kernelInitScripts
       val kernel = new Kernel(system)
       KernelManager.add(kernelId, kernel)
       val service = new CalcWebSocketService(system, initScripts, compilerArgs, kernel.remoteDeployFuture)
       kernelIdToCalcService += kernelId -> service
-      val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s:%d".format(domain, port))
+      val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s".format(host))
       JsonContent ~> ResponseString(compact(render(json))) ~> Ok
     }
 
     val kernelIntent: unfiltered.netty.async.Plan.Intent = {
       case req@POST(Path(Seg("kernels" :: Nil))) =>
         logInfo("Starting kernel")
-        req.respond(startKernel(UUID.randomUUID.toString))
+        val host = req.headers("Host").toList.head
+        req.respond(startKernel(host, UUID.randomUUID.toString))
 
       case req@POST(Path(Seg("kernels" :: kernelId :: "restart" :: Nil))) =>
         logInfo("Restarting kernel " + kernelId)
         for (kernel <- KernelManager.get(kernelId)) {
           kernel.router ! RestartKernel
         }
-        val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s:%d".format(domain, port))
+        val host = req.headers("Host").toList.head
+        val json = ("kernel_id" -> kernelId) ~ ("ws_url" -> "ws:/%s".format(host))
         val resp = JsonContent ~> ResponseString(compact(render(json))) ~> Ok
         req.respond(resp)
 

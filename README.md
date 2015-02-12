@@ -64,3 +64,24 @@ To produce a deployable artifact:
 ```
 $ sbt "project server" "assembly"
 ```
+
+Sample deployment in a Docker container (assuming that the current directory is the project's working directory
+and that a deployable `.jar` has been generated):
+
+```
+$ docker run \
+  -it \
+  --rm \
+  -v `pwd`:/mnt/scala-notebook \
+  --workdir=/mnt/scala-notebook \
+  --publish=9999:8888 \
+  java:7 \
+  java \
+  -classpath server/target/scala-2.10/notebook-server-assembly-0.3.0-SNAPSHOT.jar \
+  com.bwater.notebook.Server \
+  --port 8888 \
+  --disable_security \
+  --start_action=none
+```
+
+This will expose the service running inside the container on the host machine's IPs on port 9999.
