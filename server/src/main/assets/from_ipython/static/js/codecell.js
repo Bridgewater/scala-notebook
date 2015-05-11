@@ -24,7 +24,7 @@ var IPython = (function (IPython) {
         this.tooltip_timeout = null;
         this.clear_out_timeout = null;
         this.tooltip = null;
-        this.hideInputOnResult = true;
+        this.hideInputOnResult = false;
         this.notebook = notebook;
         IPython.Cell.apply(this, arguments);
     };

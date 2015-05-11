@@ -959,7 +959,7 @@ var IPython = (function (IPython) {
         // add_new: should a new cell be added if we are at the end of the nb
         // terminal: execute in terminal mode, which stays in the current cell
     	// hideInput: true to hide input when execution completes
-        default_options = {terminal: false, add_new: true, hideInput: true};
+        default_options = {terminal: false, add_new: true, hideInput: false};
         $.extend(default_options, options);
         var that = this;
         var cell = this.get_selected_cell();
